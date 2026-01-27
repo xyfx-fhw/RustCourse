@@ -60,19 +60,40 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                 if (hasSubsections) {
                   // 有小节：渲染可折叠的课程和小节列表
                   const hasActiveSubsection = lesson.subsections.some(sub => sub.metadata.slug === currentSlug);
+                  const isIndexActive = currentSlug === lesson.metadata?.slug;
 
                   return (
                     <li class="space-y-1">
-                      <!-- 课程标题（可折叠） -->
-                      <button
-                        class="lesson-toggle w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-between"
-                        data-lesson-id={`${chapter.id}-${lesson.id}`}
-                      >
-                        <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
-                        <svg class="w-3 h-3 transform transition-transform lesson-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
+                      <!-- 课程标题（可点击且可折叠） -->
+                      <div class="flex items-stretch">
+                        {lesson.metadata && (
+                          <a
+                            href={lesson.metadata.url}
+                            class={`flex-1 px-3 py-2 text-sm font-medium rounded-l-lg transition-colors flex items-center ${
+                              isIndexActive
+                                ? 'bg-primary text-white'
+                                : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                            data-lesson-slug={lesson.metadata.slug}
+                          >
+                            <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
+                            {isIndexActive && <span class="lesson-status text-lg ml-2">⬜</span>}
+                          </a>
+                        )}
+                        {!lesson.metadata && (
+                          <span class="flex-1 px-3 py-2 text-sm font-medium text-gray-700">
+                            {chapterIndex + 1}.{lessonIndex + 1} {lesson.title}
+                          </span>
+                        )}
+                        <button
+                          class="lesson-toggle px-2 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-r-lg transition-colors"
+                          data-lesson-id={`${chapter.id}-${lesson.id}`}
+                        >
+                          <svg class="w-3 h-3 transform transition-transform lesson-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </button>
+                      </div>
 
                       <!-- 小节列表 -->
                       <ul class={`space-y-1 ml-4 lesson-content ${hasActiveSubsection ? '' : 'hidden'}`} data-lesson-content={`${chapter.id}-${lesson.id}`}>

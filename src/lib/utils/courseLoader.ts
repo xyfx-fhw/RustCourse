@@ -143,10 +143,17 @@ export function groupByChapter(allCourses: CourseMetadata[]): Chapter[] {
     // 查找或创建课程
     let lessonObj = chapterObj.lessons.find(l => l.id === lesson);
     if (!lessonObj) {
+      // 先尝试从已有课程中查找 index.md 获取标题
+      const indexCourse = allCourses.find(c =>
+        c.chapter === chapter &&
+        c.lesson === lesson &&
+        c.subsection === 'index'
+      );
+
       const { order, title } = parseLessonName(lesson);
       lessonObj = {
         id: lesson,
-        title,
+        title: indexCourse?.title || title, // 优先使用 index.md 的标题
         order,
         subsections: [],
       };
@@ -155,13 +162,20 @@ export function groupByChapter(allCourses: CourseMetadata[]): Chapter[] {
 
     // 如果有小节，添加到小节列表
     if (subsection) {
-      const { order, title } = parseSubsectionName(subsection);
-      lessonObj.subsections.push({
-        id: subsection,
-        title,
-        order,
-        metadata: course,
-      });
+      // 跳过 index.md，它不是小节而是课程概览
+      if (subsection === 'index') {
+        // index.md 作为课程本身的元数据
+        lessonObj.metadata = course;
+      } else {
+        // 其他文件作为小节
+        const { order, title } = parseSubsectionName(subsection);
+        lessonObj.subsections.push({
+          id: subsection,
+          title,
+          order,
+          metadata: course,
+        });
+      }
     } else {
       // 如果没有小节，直接关联元数据
       lessonObj.metadata = course;
@@ -199,11 +213,15 @@ export function findAdjacentLessons(
   const chapters = groupByChapter(allLessons);
   const flatLessons: CourseMetadata[] = [];
 
-  // 扁平化所有课程和小节
+  // 扁平化所有课程和小节（跳过 index.md）
   for (const chapter of chapters) {
     for (const lesson of chapter.lessons) {
       if (lesson.subsections.length > 0) {
-        // 有小节，添加所有小节
+        // 如果有小节，先添加 index.md（如果存在）
+        if (lesson.metadata) {
+          flatLessons.push(lesson.metadata);
+        }
+        // 然后添加所有小节
         for (const subsection of lesson.subsections) {
           flatLessons.push(subsection.metadata);
         }
