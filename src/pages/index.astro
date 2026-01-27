@@ -10,20 +10,50 @@ const base = import.meta.env.BASE_URL;
 // 获取所有课程
 const allCourses = await getCollection('courses');
 const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
-  const [ch, ls] = c.slug.split('/');
+  const slugParts = c.slug.split('/');
+  const ch = slugParts[0];
+  const ls = slugParts[1];
+  const ss = slugParts.length === 3 ? slugParts[2] : undefined;
+
   const chInfo = parseChapterName(ch);
+
   return {
     ...c.data,
     slug: c.slug,
     chapter: ch,
     chapterTitle: chInfo.title,
     lesson: ls,
+    subsection: ss,
     url: `${base}/courses/${c.slug}`,
   };
 });
 
 const chapters = groupByChapter(allCoursesMetadata);
-const totalLessons = allCoursesMetadata.length;
+
+// 计算总课程数（扁平化所有课程和小节）
+let totalLessons = 0;
+for (const chapter of chapters) {
+  for (const lesson of chapter.lessons) {
+    if (lesson.subsections.length > 0) {
+      totalLessons += lesson.subsections.length;
+    } else if (lesson.metadata) {
+      totalLessons += 1;
+    }
+  }
+}
+
+// 获取第一个课程/小节的URL
+let firstLessonUrl = `${base}/courses/01-rust-basics/01-installation`;
+if (chapters.length > 0 && chapters[0].lessons.length > 0) {
+  const firstLesson = chapters[0].lessons[0];
+  if (firstLesson.subsections.length > 0) {
+    // 如果第一个课程有小节，使用第一个小节
+    firstLessonUrl = firstLesson.subsections[0].metadata.url;
+  } else if (firstLesson.metadata) {
+    // 否则使用课程本身
+    firstLessonUrl = firstLesson.metadata.url;
+  }
+}
 ---
 
 <BaseLayout>
@@ -41,7 +71,7 @@ const totalLessons = allCoursesMetadata.length;
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
-            href={`${base}/courses/01-rust-basics/01-installation`}
+            href={firstLessonUrl}
             class="btn btn-secondary text-lg px-8 py-3 inline-block"
           >
             开始学习 →
@@ -97,42 +127,90 @@ const totalLessons = allCoursesMetadata.length;
                     第 {index + 1} 章：{chapter.title}
                   </h3>
                   <p class="text-gray-600">
-                    共 {chapter.lessons.length} 节课
+                    共 {chapter.lessons.reduce((sum, lesson) => {
+                      return sum + (lesson.subsections.length > 0 ? lesson.subsections.length : 1);
+                    }, 0)} 节课
                   </p>
                 </div>
                 <span class="text-3xl">📖</span>
               </div>
 
               <ul class="space-y-2">
-                {chapter.lessons.map((lesson, lessonIndex) => (
-                  <li>
-                    <a
-                      href={lesson.url}
-                      class="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                    >
-                      <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                          <span class="text-gray-400 font-medium">
-                            {index + 1}.{lessonIndex + 1}
-                          </span>
-                          <span class="text-gray-900 group-hover:text-primary font-medium">
-                            {lesson.title}
-                          </span>
+                {chapter.lessons.map((lesson, lessonIndex) => {
+                  // 判断是否有小节
+                  if (lesson.subsections.length > 0) {
+                    // 有小节：显示课程标题和小节列表
+                    return (
+                      <li class="border-l-2 border-gray-200 pl-4 space-y-2">
+                        <div class="font-medium text-gray-700 mb-2">
+                          {index + 1}.{lessonIndex + 1} {lesson.title}
                         </div>
-                        {lesson.duration && (
-                          <span class="text-sm text-gray-500">
-                            {lesson.duration} 分钟
-                          </span>
-                        )}
-                      </div>
-                      {lesson.description && (
-                        <p class="text-sm text-gray-600 mt-1 ml-12">
-                          {lesson.description}
-                        </p>
-                      )}
-                    </a>
-                  </li>
-                ))}
+                        <ul class="space-y-1 ml-4">
+                          {lesson.subsections.map((subsection, subsectionIndex) => (
+                            <li>
+                              <a
+                                href={subsection.metadata.url}
+                                class="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                              >
+                                <div class="flex items-center justify-between">
+                                  <div class="flex items-center space-x-3">
+                                    <span class="text-gray-400 font-medium">
+                                      {index + 1}.{lessonIndex + 1}.{subsectionIndex + 1}
+                                    </span>
+                                    <span class="text-gray-900 group-hover:text-primary font-medium">
+                                      {subsection.title}
+                                    </span>
+                                  </div>
+                                  {subsection.metadata.duration && (
+                                    <span class="text-sm text-gray-500">
+                                      {subsection.metadata.duration} 分钟
+                                    </span>
+                                  )}
+                                </div>
+                                {subsection.metadata.description && (
+                                  <p class="text-sm text-gray-600 mt-1 ml-12">
+                                    {subsection.metadata.description}
+                                  </p>
+                                )}
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    );
+                  } else {
+                    // 没有小节：直接显示课程链接
+                    return (
+                      <li>
+                        <a
+                          href={lesson.metadata?.url}
+                          class="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        >
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                              <span class="text-gray-400 font-medium">
+                                {index + 1}.{lessonIndex + 1}
+                              </span>
+                              <span class="text-gray-900 group-hover:text-primary font-medium">
+                                {lesson.title}
+                              </span>
+                            </div>
+                            {lesson.metadata?.duration && (
+                              <span class="text-sm text-gray-500">
+                                {lesson.metadata.duration} 分钟
+                              </span>
+                            )}
+                          </div>
+                          {lesson.metadata?.description && (
+                            <p class="text-sm text-gray-600 mt-1 ml-12">
+                              {lesson.metadata.description}
+                            </p>
+                          )}
+                        </a>
+                      </li>
+                    );
+                  }
+                })}
               </ul>
             </div>
           ))}
@@ -157,7 +235,7 @@ const totalLessons = allCoursesMetadata.length;
           现在就开始你的 Rust 学习之旅
         </p>
         <a
-          href={`${base}/courses/01-rust-basics/01-installation`}
+          href={firstLessonUrl}
           class="btn btn-secondary text-lg px-8 py-3 inline-block"
         >
           开始第一课 →
