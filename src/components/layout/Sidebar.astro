@@ -1,7 +1,5 @@
 ---
 import type { Chapter } from '@/types/course';
-import { getCollection } from 'astro:content';
-import { parseTabContent } from '@/lib/utils/tabParser';
 
 interface Props {
   chapters: Chapter[];
@@ -9,19 +7,6 @@ interface Props {
 }
 
 const { chapters, currentSlug } = Astro.props;
-
-// 获取所有课程并计算tab信息
-const allCourses = await getCollection('courses');
-const courseTabInfo: Record<string, { hasTabs: boolean; tabIds: string[] }> = {};
-for (const course of allCourses) {
-  const tabs = parseTabContent(course.body);
-  courseTabInfo[course.slug] = {
-    hasTabs: tabs !== null && tabs.length > 0,
-    tabIds: tabs ? tabs.map(t => t.id) : [],
-  };
-}
-
-const courseTabInfoJson = JSON.stringify(courseTabInfo);
 ---
 
 <aside class="w-64 bg-white border-r border-gray-200 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
@@ -76,7 +61,6 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                             }`}
                             data-lesson-slug={lesson.metadata.slug}
                           >
-                            <span class="lesson-status text-lg mr-2 w-5 inline-block text-center">⬜</span>
                             <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
                           </a>
                         )}
@@ -110,7 +94,6 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                                 }`}
                                 data-lesson-slug={subsection.metadata.slug}
                               >
-                                <span class="lesson-status text-lg mr-2 w-5 inline-block text-center">⬜</span>
                                 <span>{chapterIndex + 1}.{lessonIndex + 1}.{subsectionIndex + 1} {subsection.metadata.title}</span>
                               </a>
                             </li>
@@ -133,7 +116,6 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                         }`}
                         data-lesson-slug={lesson.metadata?.slug}
                       >
-                        <span class="lesson-status text-lg mr-2">⬜</span>
                         <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
                       </a>
                     </li>
@@ -277,60 +259,4 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
   // 页面加载时初始化
   initChapterToggle();
   initLessonToggle();
-</script>
-
-<!-- 课程进度状态更新脚本 -->
-<script define:vars={{ courseTabInfoJson }}>
-  const courseTabInfo = JSON.parse(courseTabInfoJson);
-
-  function updateSidebarStatus() {
-    const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
-
-    document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
-      const slug = element.getAttribute('data-lesson-slug');
-      const statusIcon = element.querySelector('.lesson-status');
-
-      if (statusIcon && slug) {
-        const info = courseTabInfo[slug];
-        let hasProgress = false;
-
-        if (info && info.hasTabs) {
-          // 有 tab 的课程：只检查 tab 完成情况，不检查 completedLessons
-          const tabProgress = localStorage.getItem(`tab-progress-${slug}`);
-          const tabsCompleted = tabProgress ? JSON.parse(tabProgress).completedTabs || [] : [];
-
-          if (tabsCompleted.length === info.tabIds.length && info.tabIds.length > 0) {
-            statusIcon.textContent = '✅'; // 全部 Tab 完成
-            hasProgress = true;
-          } else if (tabsCompleted.length > 0) {
-            statusIcon.textContent = '🔵'; // 部分 Tab 完成
-            hasProgress = true;
-          } else {
-            statusIcon.textContent = ''; // 未开始，不显示
-            hasProgress = false;
-          }
-        } else {
-          // 没有 tab 的课程：检查课程完成状态
-          const isCompleted = completedLessons.includes(slug);
-          if (isCompleted) {
-            statusIcon.textContent = '✅';
-            hasProgress = true;
-          } else {
-            statusIcon.textContent = ''; // 未开始，不显示
-            hasProgress = false;
-          }
-        }
-
-        // 已读标识始终占用空间，不需要控制 display
-        // 只需设置内容为空或有 emoji
-      }
-    });
-  }
-
-  // 页面加载时初始化
-  updateSidebarStatus();
-
-  // 监听进度更新事件
-  window.addEventListener('storage', updateSidebarStatus);
-  window.addEventListener('progress-updated', updateSidebarStatus);
 </script>

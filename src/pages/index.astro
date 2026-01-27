@@ -144,12 +144,10 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
                       <li class="border-l-2 border-gray-200 pl-4 space-y-2">
                         {lesson.metadata ? (
                           <a href={lesson.metadata.url} class="flex items-center font-medium text-gray-700 hover:text-primary mb-2">
-                            <span class="w-5 mr-2"></span>
                             <span>{index + 1}.{lessonIndex + 1} {lesson.title}</span>
                           </a>
                         ) : (
                           <div class="flex items-center font-medium text-gray-700 mb-2">
-                            <span class="w-5 mr-2"></span>
                             <span>{index + 1}.{lessonIndex + 1} {lesson.title}</span>
                           </div>
                         )}
@@ -162,7 +160,6 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
                               >
                                 <div class="flex items-center justify-between">
                                   <div class="flex items-center space-x-3">
-                                    <span class="w-5"></span>
                                     <span class="text-gray-400 font-medium">
                                       {index + 1}.{lessonIndex + 1}.{subsectionIndex + 1}
                                     </span>
@@ -197,7 +194,6 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
                         >
                           <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-3">
-                              <span class="w-5"></span>
                               <span class="text-gray-400 font-medium">
                                 {index + 1}.{lessonIndex + 1}
                               </span>
