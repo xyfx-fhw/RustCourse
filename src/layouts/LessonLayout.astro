@@ -3,9 +3,11 @@ import BaseLayout from './BaseLayout.astro';
 import Header from '@/components/layout/Header.astro';
 import Sidebar from '@/components/layout/Sidebar.astro';
 import TableOfContents from '@/components/layout/TableOfContents.astro';
-import CodePlayground from '@/components/interactive/CodePlayground';
+import TabNavigation from '@/components/layout/TabNavigation.tsx';
+import RunnableCodeBlock from '@/components/interactive/RunnableCodeBlock';
 import type { CourseMetadata, Chapter } from '@/types/course';
 import type { MarkdownHeading } from 'astro';
+import type { TabContent } from '@/lib/utils/tabParser';
 
 interface Props {
   frontmatter: CourseMetadata;
@@ -13,12 +15,12 @@ interface Props {
   prevLesson?: CourseMetadata | null;
   nextLesson?: CourseMetadata | null;
   headings: MarkdownHeading[];
+  tabs?: TabContent[] | null;
 }
 
-const { frontmatter, chapters, prevLesson, nextLesson, headings } = Astro.props;
+const { frontmatter, chapters, prevLesson, nextLesson, headings, tabs } = Astro.props;
 const base = import.meta.env.BASE_URL;
-const hasPlayground = frontmatter.hasPlayground || false;
-const defaultCode = frontmatter.defaultCode || 'fn main() {\n    println!("Hello, world!");\n}';
+const hasTabs = tabs && tabs.length > 0;
 ---
 
 <BaseLayout title={frontmatter.title} description={frontmatter.description}>
@@ -72,56 +74,76 @@ const defaultCode = frontmatter.defaultCode || 'fn main() {\n    println!("Hello
             </div>
           </div>
 
-          <!-- 课程内容 -->
-          <article class="prose prose-lg max-w-none mb-12">
-            <slot />
-          </article>
+          <!-- Tab导航（如果有的话） -->
+          {hasTabs && (
+            <TabNavigation
+              tabs={tabs!.map(t => ({ id: t.id, title: t.title }))}
+              currentSlug={frontmatter.slug}
+              onTabChange={(tabId) => {
+                // 触发tab切换事件
+                const event = new CustomEvent('tab-change', {
+                  detail: { tabId }
+                });
+                window.dispatchEvent(event);
+              }}
+              client:load
+            />
+          )}
 
-          <!-- 代码编辑器（嵌入式） -->
-          {hasPlayground && (
-            <div class="my-12">
-              <h2 class="text-2xl font-bold text-gray-900 mb-4">💻 在线实践</h2>
-              <div class="border border-gray-200 rounded-lg overflow-hidden shadow-lg">
-                <CodePlayground defaultCode={defaultCode} client:load />
-              </div>
-            </div>
+          <!-- 课程内容 -->
+          {hasTabs ? (
+            <!-- Tab模式：使用渲染后的内容，通过JS控制显示 -->
+            <article class="prose prose-lg max-w-none mb-12" id="tab-article">
+              <slot />
+            </article>
+          ) : (
+            <!-- 普通模式：直接渲染 -->
+            <article class="prose prose-lg max-w-none mb-12">
+              <slot />
+            </article>
           )}
 
           <!-- 上一页/下一页导航 -->
-          <nav class="border-t border-gray-200 pt-8 mt-12">
-            <div class="flex justify-between items-center">
-              <div class="flex-1">
-                {prevLesson && (
-                  <a
-                    href={prevLesson.url}
-                    class="inline-flex items-center text-primary hover:text-primary-dark transition-colors group"
-                  >
-                    <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    <div class="text-left">
-                      <div class="text-xs text-gray-500">上一课</div>
-                      <div class="font-medium">{prevLesson.title}</div>
-                    </div>
-                  </a>
-                )}
+          <nav class="pt-8 mt-12">
+            <div class="flex justify-between items-center" style="min-height: 48px;">
+              <div class="flex-1" style="min-height: 48px;">
+                <a
+                  id="prev-nav-link"
+                  href={prevLesson?.url || '#'}
+                  data-default-url={prevLesson?.url || ''}
+                  data-default-title={prevLesson?.title || ''}
+                  data-has-prev-lesson={prevLesson ? 'true' : 'false'}
+                  class="inline-flex items-center text-primary hover:text-primary-dark transition-colors group"
+                  style={!prevLesson ? 'display: none;' : ''}
+                >
+                  <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                  <div class="text-left">
+                    <div id="prev-nav-label" class="text-xs text-gray-500">上一课</div>
+                    <div id="prev-nav-title" class="font-medium">{prevLesson?.title || ''}</div>
+                  </div>
+                </a>
               </div>
 
-              <div class="flex-1 text-right">
-                {nextLesson && (
-                  <a
-                    href={nextLesson.url}
-                    class="inline-flex items-center text-primary hover:text-primary-dark transition-colors group"
-                  >
-                    <div class="text-right">
-                      <div class="text-xs text-gray-500">下一课</div>
-                      <div class="font-medium">{nextLesson.title}</div>
-                    </div>
-                    <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </a>
-                )}
+              <div class="flex-1 text-right" style="min-height: 48px;">
+                <a
+                  id="next-nav-link"
+                  href={nextLesson?.url || '#'}
+                  data-default-url={nextLesson?.url || ''}
+                  data-default-title={nextLesson?.title || ''}
+                  data-has-next-lesson={nextLesson ? 'true' : 'false'}
+                  class="inline-flex items-center text-primary hover:text-primary-dark transition-colors group"
+                  style={!nextLesson ? 'display: none;' : ''}
+                >
+                  <div class="text-right">
+                    <div id="next-nav-label" class="text-xs text-gray-500">下一课</div>
+                    <div id="next-nav-title" class="font-medium">{nextLesson?.title || ''}</div>
+                  </div>
+                  <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
               </div>
             </div>
           </nav>
@@ -233,3 +255,216 @@ const defaultCode = frontmatter.defaultCode || 'fn main() {\n    println!("Hello
   // 如果页面很短，立即检查
   setTimeout(checkScrollCompletion, 1000);
 </script>
+
+<!-- Tab内容控制脚本 -->
+<script define:vars={{ hasTabs, tabs, slug: frontmatter.slug }}>
+  if (hasTabs && tabs) {
+    // 为每个h1标题添加tab标识
+    const article = document.getElementById('tab-article');
+    if (article) {
+      const h1Elements = article.querySelectorAll('h1');
+
+      // 获取保存的当前 tab 索引
+      let savedTabIndex = 0;
+      try {
+        const key = `tab-progress-${slug}`;
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const progress = JSON.parse(saved);
+          savedTabIndex = progress.currentTab || 0;
+        }
+      } catch (e) {
+        console.error('Failed to load tab progress:', e);
+      }
+
+      // 为每个h1及其后续内容添加tab标识
+      h1Elements.forEach((h1, index) => {
+        const tabId = `tab-${index}`;
+        h1.setAttribute('data-tab-section', tabId);
+
+        // 隐藏所有h1标题（因为已经在tab导航显示了）
+        h1.style.display = 'none';
+
+        // 找到当前h1和下一个h1之间的所有元素
+        let currentElement = h1.nextElementSibling;
+        while (currentElement && currentElement.tagName !== 'H1') {
+          currentElement.setAttribute('data-tab-section', tabId);
+          currentElement = currentElement.nextElementSibling;
+        }
+
+        // 根据保存的 tab 索引显示/隐藏内容
+        if (index !== savedTabIndex) {
+          let hideElement = h1.nextElementSibling;
+          while (hideElement && hideElement.tagName !== 'H1') {
+            hideElement.style.display = 'none';
+            hideElement = hideElement.nextElementSibling;
+          }
+        }
+      });
+
+      // 监听tab切换事件
+      window.addEventListener('tab-change', (e) => {
+        const targetTabId = e.detail.tabId;
+
+        // 隐藏所有tab内容
+        h1Elements.forEach((h1) => {
+          const tabId = h1.getAttribute('data-tab-section');
+          h1.style.display = 'none';
+          let hideElement = h1.nextElementSibling;
+          while (hideElement && hideElement.tagName !== 'H1') {
+            hideElement.style.display = 'none';
+            hideElement = hideElement.nextElementSibling;
+          }
+        });
+
+        // 显示目标tab内容
+        const targetH1 = article.querySelector(`[data-tab-section="${targetTabId}"]`);
+        if (targetH1 && targetH1.tagName === 'H1') {
+          // H1 标题保持隐藏（已经显示在tab导航中）
+          targetH1.style.display = 'none';
+          // 只显示 H1 后面的内容
+          let showElement = targetH1.nextElementSibling;
+          while (showElement && showElement.tagName !== 'H1') {
+            showElement.style.display = 'block';
+            showElement = showElement.nextElementSibling;
+          }
+        }
+      });
+    }
+  }
+</script>
+
+<!-- Tab导航控制脚本 -->
+<script define:vars={{ hasTabs, tabs, slug: frontmatter.slug }}>
+  if (hasTabs && tabs && tabs.length > 0) {
+    // 获取当前 tab 索引
+    function getCurrentTabIndex() {
+      const key = `tab-progress-${slug}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          const progress = JSON.parse(saved);
+          return progress.currentTab || 0;
+        } catch (e) {
+          return 0;
+        }
+      }
+      return 0;
+    }
+
+    // 切换到指定的 tab
+    function switchToTab(tabIndex) {
+      if (tabIndex >= 0 && tabIndex < tabs.length) {
+        const tabId = tabs[tabIndex].id;
+        const event = new CustomEvent('tab-change', {
+          detail: { tabId }
+        });
+        window.dispatchEvent(event);
+
+        // 保存 tab 进度
+        const key = `tab-progress-${slug}`;
+        localStorage.setItem(key, JSON.stringify({
+          currentTab: tabIndex,
+          lastUpdated: Date.now(),
+        }));
+
+        // 滚动到顶部
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }
+
+    // 更新导航按钮
+    function updateNavigation() {
+      const currentTabIndex = getCurrentTabIndex();
+      const prevLink = document.getElementById('prev-nav-link');
+      const nextLink = document.getElementById('next-nav-link');
+      const prevTitle = document.getElementById('prev-nav-title');
+      const nextTitle = document.getElementById('next-nav-title');
+      const prevLabel = document.getElementById('prev-nav-label');
+      const nextLabel = document.getElementById('next-nav-label');
+
+      // 更新"上一课"按钮
+      if (prevLink && prevTitle) {
+        if (currentTabIndex > 0) {
+          // 不是第一个 tab，链接到上一个 tab
+          const prevTab = tabs[currentTabIndex - 1];
+          prevLink.href = 'javascript:void(0)';
+          prevLink.style.display = 'inline-flex'; // 确保显示
+          prevLink.onclick = (e) => {
+            e.preventDefault();
+            switchToTab(currentTabIndex - 1);
+            return false;
+          };
+          prevTitle.textContent = prevTab.title;
+          if (prevLabel) {
+            prevLabel.textContent = '上一节'; // Tab 导航用"上一节"
+          }
+        } else {
+          // 是第一个 tab
+          const hasPrevLesson = prevLink.getAttribute('data-has-prev-lesson') === 'true';
+          if (hasPrevLesson) {
+            // 有上一课，恢复默认链接
+            const defaultUrl = prevLink.getAttribute('data-default-url');
+            const defaultTitle = prevLink.getAttribute('data-default-title');
+            prevLink.href = defaultUrl;
+            prevLink.style.display = 'inline-flex'; // 确保显示
+            prevLink.onclick = null;
+            prevTitle.textContent = defaultTitle;
+            if (prevLabel) {
+              prevLabel.textContent = '上一课'; // 跨课程导航用"上一课"
+            }
+          } else {
+            // 没有上一课，隐藏按钮
+            prevLink.style.display = 'none';
+          }
+        }
+      }
+
+      // 更新"下一课"按钮
+      if (nextLink && nextTitle) {
+        if (currentTabIndex < tabs.length - 1) {
+          // 不是最后一个 tab，链接到下一个 tab
+          const nextTab = tabs[currentTabIndex + 1];
+          nextLink.href = 'javascript:void(0)';
+          nextLink.style.display = 'inline-flex'; // 确保显示
+          nextLink.onclick = (e) => {
+            e.preventDefault();
+            switchToTab(currentTabIndex + 1);
+            return false;
+          };
+          nextTitle.textContent = nextTab.title;
+          if (nextLabel) {
+            nextLabel.textContent = '下一节'; // Tab 导航用"下一节"
+          }
+        } else {
+          // 是最后一个 tab
+          const hasNextLesson = nextLink.getAttribute('data-has-next-lesson') === 'true';
+          if (hasNextLesson) {
+            // 有下一课，恢复默认链接
+            const defaultUrl = nextLink.getAttribute('data-default-url');
+            const defaultTitle = nextLink.getAttribute('data-default-title');
+            nextLink.href = defaultUrl;
+            nextLink.style.display = 'inline-flex'; // 确保显示
+            nextLink.onclick = null;
+            nextTitle.textContent = defaultTitle;
+            if (nextLabel) {
+              nextLabel.textContent = '下一课'; // 跨课程导航用"下一课"
+            }
+          } else {
+            // 没有下一课，隐藏按钮
+            nextLink.style.display = 'none';
+          }
+        }
+      }
+    }
+
+    // 初始化导航
+    updateNavigation();
+
+    // 监听 tab 切换事件，更新导航
+    window.addEventListener('tab-change', () => {
+      // 延迟更新，等待 localStorage 保存完成
+      setTimeout(updateNavigation, 50);
+    });
+  }
+

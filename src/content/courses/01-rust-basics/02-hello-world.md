@@ -4,25 +4,18 @@ description: "编写你的第一个 Rust 程序"
 duration: 20
 difficulty: "beginner"
 tags: ["入门", "基础语法", "cargo"]
-hasPlayground: true
-defaultCode: |
-  fn main() {
-      println!("Hello, world!");
-  }
 ---
 
-# Hello, World!
-
-## 速览
+# 速览
 
 在编程世界中，"Hello, World!" 是学习新语言的传统第一步。在本课中，你将：
 - 创建你的第一个 Rust 项目
 - 了解 Rust 项目的基本结构
 - 编译并运行 Rust 程序
 
-## 详细讲解
+# 详细讲解
 
-### 使用 Cargo 创建新项目
+## 使用 Cargo 创建新项目
 
 Cargo 不仅是包管理器，还是 Rust 的构建工具。让我们用它创建第一个项目：
 
@@ -150,7 +143,7 @@ Hello, Rust!
 Rust 支持中文！
 ```
 
-## 实践练习
+# 实践练习
 
 1. 创建一个新的 Rust 项目 `my_first_rust`
 2. 修改 `main.rs`，打印你的名字和一条欢迎消息
@@ -159,26 +152,26 @@ Rust 支持中文！
 
 **挑战**: 尝试使用 `cargo build` 只编译程序（不运行），然后手动运行生成的可执行文件。
 
-## 常见问题
+# 常见问题
 
-### println! 为什么有感叹号？
+## println! 为什么有感叹号？
 
 感叹号 `!` 表示这是一个**宏**而不是普通函数。宏是 Rust 的强大特性，可以在编译时生成代码。
 
-### Cargo.toml 是什么？
+## Cargo.toml 是什么？
 
 `Cargo.toml` 是 Rust 项目的配置文件，使用 TOML 格式。它包含：
 - 项目元信息（名称、版本）
 - Rust 版本 (edition)
 - 依赖包列表
 
-### target 目录是什么？
+## target 目录是什么？
 
 `target/` 目录包含编译生成的文件：
 - `target/debug/` - 调试版本（未优化）
 - `target/release/` - 发布版本（优化后）
 
-## 要点总结
+# 要点总结
 
 - ✅ 使用 `cargo new` 创建新项目
 - ✅ `main` 函数是程序的入口点
@@ -186,6 +179,6 @@ Rust 支持中文！
 - ✅ `cargo run` 编译并运行程序
 - ✅ Rust 完全支持 UTF-8 和 Emoji 😊
 
-## 下一步
+# 下一步
 
 恭喜！你已经编写并运行了第一个 Rust 程序。在下一课中，我们将学习 Rust 的变量和数据类型。

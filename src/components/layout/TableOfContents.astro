@@ -7,8 +7,8 @@ interface Props {
 
 const { headings } = Astro.props;
 
-// 只显示 h2 和 h3 标题
-const filteredHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
+// 显示所有级别的标题：h1（tab标题）、h2、h3
+const filteredHeadings = headings.filter(h => h.depth === 1 || h.depth === 2 || h.depth === 3);
 ---
 
 {filteredHeadings.length > 0 && (
@@ -17,12 +17,18 @@ const filteredHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
     <ul class="space-y-1 text-sm">
       {filteredHeadings.map((heading) => (
         <li
-          class={heading.depth === 2 ? 'pl-4' : 'pl-8'}
+          class={
+            heading.depth === 1 ? 'pl-2' :
+            heading.depth === 2 ? 'pl-6' :
+            'pl-10'
+          }
           data-heading-slug={heading.slug}
         >
           <a
             href={`#${heading.slug}`}
-            class="block py-1.5 text-gray-600 hover:text-primary transition-colors rounded hover:bg-gray-50 px-2"
+            class={`block py-1.5 transition-colors rounded hover:bg-gray-50 px-2 ${
+              heading.depth === 1 ? 'text-gray-800 font-semibold hover:text-primary' : 'text-gray-600 hover:text-primary'
+            }`}
           >
             {heading.text}
           </a>
@@ -60,31 +66,57 @@ const filteredHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
       const targetId = this.getAttribute('href');
       const target = document.querySelector(targetId);
       if (target) {
-        // header 高度是 64px (h-16)，再加 20px 的额外间距
-        const headerOffset = 84;
-        const elementPosition = target.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        // 如果目标元素在隐藏的tab中，先切换到对应的tab
+        const tabSection = target.getAttribute('data-tab-section');
+        if (tabSection) {
+          // 触发tab切换事件
+          const event = new CustomEvent('tab-change', {
+            detail: { tabId: tabSection }
+          });
+          window.dispatchEvent(event);
 
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
+          // 等待tab切换完成后再滚动
+          setTimeout(() => {
+            const headerOffset = 84;
+            const elementPosition = target.getBoundingClientRect().top;
+            const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+            window.scrollTo({
+              top: offsetPosition,
+              behavior: 'smooth'
+            });
+          }, 100);
+        } else {
+          // 普通滚动（非tab模式）
+          const headerOffset = 84;
+          const elementPosition = target.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
+        }
       }
     });
   });
 
   // 滚动时高亮当前标题
   function updateActiveHeading() {
+    // 只检查可见的标题（当前tab中的）
     const headings = document.querySelectorAll('article h2[id], article h3[id]');
     const tocLinks = document.querySelectorAll('[data-heading-slug] a');
 
     let currentHeading = '';
 
     headings.forEach((heading) => {
-      const rect = heading.getBoundingClientRect();
-      // 考虑 header 的高度，当标题在视口上方 100px 时就认为是当前标题
-      if (rect.top <= 100) {
-        currentHeading = heading.id;
+      // 只考虑可见的标题
+      if (heading.offsetParent !== null) {
+        const rect = heading.getBoundingClientRect();
+        // 考虑 header 的高度，当标题在视口上方 100px 时就认为是当前标题
+        if (rect.top <= 100) {
+          currentHeading = heading.id;
+        }
       }
     });
 
@@ -102,6 +134,12 @@ const filteredHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
 
   // 监听滚动
   window.addEventListener('scroll', updateActiveHeading);
+
+  // 监听 tab 切换事件，更新高亮
+  window.addEventListener('tab-change', () => {
+    setTimeout(updateActiveHeading, 100);
+  });
+
   // 初始化
   updateActiveHeading();
 </script>

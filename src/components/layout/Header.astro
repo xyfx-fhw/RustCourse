@@ -1,12 +1,25 @@
 ---
 import { getCollection } from 'astro:content';
+import { parseTabContent } from '@/lib/utils/tabParser';
 
 // 顶部导航栏
 const base = import.meta.env.BASE_URL;
 
-// 获取总课程数
+// 获取所有课程并计算tab信息
 const allCourses = await getCollection('courses');
+
+// 计算tab信息：哪些课程有tab，每个tab的ID
+const courseTabInfo: Record<string, { hasTabs: boolean; tabIds: string[] }> = {};
+for (const course of allCourses) {
+  const tabs = parseTabContent(course.body);
+  courseTabInfo[course.slug] = {
+    hasTabs: tabs !== null && tabs.length > 0,
+    tabIds: tabs ? tabs.map(t => t.id) : [],
+  };
+}
+
 const totalLessons = allCourses.length;
+const courseTabInfoJson = JSON.stringify(courseTabInfo);
 ---
 
 <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -16,7 +29,7 @@ const totalLessons = allCourses.length;
       <div class="flex items-center space-x-4">
         <a href={base} class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
           <span class="text-3xl">🦀</span>
-          <span class="text-xl font-bold text-gray-900">Rust 学习课程</span>
+          <span class="text-xl font-bold text-gray-900">Rust 互动教程</span>
         </a>
       </div>
 
@@ -88,7 +101,10 @@ const totalLessons = allCourses.length;
   </div>
 </header>
 
-<script define:vars={{ totalLessons }}>
+<script define:vars={{ totalLessons, courseTabInfoJson }}>
+  // 解析tab信息
+  const courseTabInfo = JSON.parse(courseTabInfoJson);
+
   // 移动端菜单切换
   const menuButton = document.getElementById('mobile-menu-button');
   const mobileMenu = document.getElementById('mobile-menu');
@@ -97,12 +113,43 @@ const totalLessons = allCourses.length;
     mobileMenu?.classList.toggle('hidden');
   });
 
+  /**
+   * 计算基于tab的完成进度
+   */
+  function calculateTabBasedProgress() {
+    const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+
+    let totalTabs = 0;
+    let completedTabsCount = 0;
+
+    // 遍历所有课程
+    for (const [slug, info] of Object.entries(courseTabInfo)) {
+      if (info.hasTabs) {
+        // 有tab的课程：按tab计算
+        const tabProgressKey = `tab-progress-${slug}`;
+        const tabProgress = localStorage.getItem(tabProgressKey);
+        const tabsCompleted = tabProgress ? (JSON.parse(tabProgress).completedTabs || []) : [];
+
+        totalTabs += info.tabIds.length;
+        completedTabsCount += tabsCompleted.length;
+      } else {
+        // 无tab的课程：按lesson计算（1个lesson = 1个tab）
+        totalTabs += 1;
+        if (completedLessons.includes(slug)) {
+          completedTabsCount += 1;
+        }
+      }
+    }
+
+    return { totalTabs, completedTabsCount };
+  }
+
   // 更新 header 进度指示器
   function updateHeaderProgress() {
     try {
-      const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+      const { totalTabs, completedTabsCount } = calculateTabBasedProgress();
 
-      const percentage = totalLessons > 0 ? Math.round((completedLessons.length / totalLessons) * 100) : 0;
+      const percentage = totalTabs > 0 ? Math.round((completedTabsCount / totalTabs) * 100) : 0;
 
       const progressText = document.getElementById('header-progress-text');
       const progressContainer = document.getElementById('header-progress');
@@ -135,8 +182,13 @@ const totalLessons = allCourses.length;
 
   // 监听 storage 变化（跨标签页同步）
   window.addEventListener('storage', (e) => {
-    if (e.key === 'completedLessons') {
+    if (e.key === 'completedLessons' || e.key?.startsWith('tab-progress-')) {
       updateHeaderProgress();
     }
+  });
+
+  // 监听自定义事件（同一页面内的更新）
+  window.addEventListener('progress-updated', () => {
+    updateHeaderProgress();
   });
 </script>

@@ -1,5 +1,7 @@
 ---
 import type { Chapter } from '@/types/course';
+import { getCollection } from 'astro:content';
+import { parseTabContent } from '@/lib/utils/tabParser';
 
 interface Props {
   chapters: Chapter[];
@@ -7,6 +9,19 @@ interface Props {
 }
 
 const { chapters, currentSlug } = Astro.props;
+
+// 获取所有课程并计算tab信息
+const allCourses = await getCollection('courses');
+const courseTabInfo: Record<string, { hasTabs: boolean; tabIds: string[] }> = {};
+for (const course of allCourses) {
+  const tabs = parseTabContent(course.body);
+  courseTabInfo[course.slug] = {
+    hasTabs: tabs !== null && tabs.length > 0,
+    tabIds: tabs ? tabs.map(t => t.id) : [],
+  };
+}
+
+const courseTabInfoJson = JSON.stringify(courseTabInfo);
 ---
 
 <aside class="w-64 bg-white border-r border-gray-200 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
@@ -37,13 +52,15 @@ const { chapters, currentSlug } = Astro.props;
                   <li>
                     <a
                       href={lesson.url}
-                      class={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                      class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
                         isActive
                           ? 'bg-primary text-white font-medium'
                           : 'text-gray-600 hover:bg-gray-100'
                       }`}
+                      data-lesson-slug={lesson.slug}
                     >
-                      {lesson.title}
+                      <span>{lesson.title}</span>
+                      <span class="lesson-status text-lg ml-2">⬜</span>
                     </a>
                   </li>
                 );
@@ -131,4 +148,63 @@ const { chapters, currentSlug } = Astro.props;
 
   // 页面加载时初始化
   initChapterToggle();
+</script>
+
+<!-- 课程进度状态更新脚本 -->
+<script define:vars={{ courseTabInfoJson }}>
+  const courseTabInfo = JSON.parse(courseTabInfoJson);
+
+  function updateSidebarStatus() {
+    const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+
+    document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
+      const slug = element.getAttribute('data-lesson-slug');
+      const statusIcon = element.querySelector('.lesson-status');
+
+      if (statusIcon && slug) {
+        const info = courseTabInfo[slug];
+        let hasProgress = false;
+
+        if (info && info.hasTabs) {
+          // 有 tab 的课程：检查 tab 完成情况
+          const tabProgress = localStorage.getItem(`tab-progress-${slug}`);
+          const tabsCompleted = tabProgress ? JSON.parse(tabProgress).completedTabs || [] : [];
+
+          if (tabsCompleted.length === info.tabIds.length && info.tabIds.length > 0) {
+            statusIcon.textContent = '✅'; // 全部完成
+            hasProgress = true;
+          } else if (tabsCompleted.length > 0) {
+            statusIcon.textContent = '🔵'; // 部分完成
+            hasProgress = true;
+          } else {
+            statusIcon.textContent = ''; // 未开始，不显示
+            hasProgress = false;
+          }
+        } else {
+          // 没有 tab 的课程：检查课程完成状态
+          if (completedLessons.includes(slug)) {
+            statusIcon.textContent = '✅';
+            hasProgress = true;
+          } else {
+            statusIcon.textContent = ''; // 未开始，不显示
+            hasProgress = false;
+          }
+        }
+
+        // 控制图标的可见性
+        if (hasProgress) {
+          statusIcon.style.display = 'inline';
+        } else {
+          statusIcon.style.display = 'none';
+        }
+      }
+    });
+  }
+
+  // 页面加载时初始化
+  updateSidebarStatus();
+
+  // 监听进度更新事件
+  window.addEventListener('storage', updateSidebarStatus);
+  window.addEventListener('progress-updated', updateSidebarStatus);
 </script>

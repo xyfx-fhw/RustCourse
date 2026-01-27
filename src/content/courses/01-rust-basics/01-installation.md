@@ -6,9 +6,7 @@ difficulty: "beginner"
 tags: ["安装", "环境配置", "rustup"]
 ---
 
-# 安装 Rust
-
-## 速览
+# 速览
 
 Rust 使用 **rustup** 作为官方的工具链管理器。通过 rustup，你可以轻松安装、更新和管理不同版本的 Rust 编译器。
 
@@ -17,9 +15,9 @@ Rust 使用 **rustup** 作为官方的工具链管理器。通过 rustup，你�
 - 验证安装是否成功
 - 了解 Rust 工具链的基本组成
 
-## 详细讲解
+# 详细讲解
 
-### 什么是 Rustup？
+## 什么是 Rustup？
 
 Rustup 是 Rust 官方的工具链安装器和版本管理工具。它可以帮助你：
 - 安装和更新 Rust 编译器
@@ -87,19 +85,19 @@ cargo 1.75.0 (1d8b05cdd 2023-11-20)
 - **rustfmt**: 代码格式化工具
 - **clippy**: Rust 代码检查工具
 
-## 实践练习
+# 实践练习
 
 1. 在你的系统上安装 Rust
 2. 运行 `rustc --version` 和 `cargo --version` 验证安装
 3. 尝试运行 `rustup --help` 查看 rustup 的其他功能
 
-## 要点总结
+# 要点总结
 
 - ✅ Rustup 是官方推荐的 Rust 安装工具
 - ✅ 一条命令即可安装完整的 Rust 工具链
 - ✅ 安装后需要验证 `rustc` 和 `cargo` 是否可用
 - ✅ Rust 提供了完整的开发工具链（编译器、包管理器、代码检查工具等）
 
-## 下一步
+# 下一步
 
 现在你已经成功安装了 Rust，在下一课中，我们将编写第一个 Rust 程序 "Hello, World!"。

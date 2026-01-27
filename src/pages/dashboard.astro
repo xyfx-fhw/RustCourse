@@ -3,12 +3,15 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Header from '@/components/layout/Header.astro';
 import { groupByChapter, parseChapterName } from '@/lib/utils/courseLoader';
+import { parseTabContent } from '@/lib/utils/tabParser';
 import type { CourseMetadata } from '@/types/course';
 
 const base = import.meta.env.BASE_URL;
 
 // 获取所有课程
 const allCourses = await getCollection('courses');
+
+// 构建课程元数据，并计算tab信息
 const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
   const [ch, ls] = c.slug.split('/');
   const chInfo = parseChapterName(ch);
@@ -22,8 +25,21 @@ const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
   };
 });
 
+// 计算tab信息：哪些课程有tab，每个tab的ID
+const courseTabInfo: Record<string, { hasTabs: boolean; tabIds: string[] }> = {};
+for (const course of allCourses) {
+  const tabs = parseTabContent(course.body);
+  courseTabInfo[course.slug] = {
+    hasTabs: tabs !== null && tabs.length > 0,
+    tabIds: tabs ? tabs.map(t => t.id) : [],
+  };
+}
+
 const chapters = groupByChapter(allCoursesMetadata);
 const totalLessons = allCoursesMetadata.length;
+
+// 将courseTabInfo传递给前端
+const courseTabInfoJson = JSON.stringify(courseTabInfo);
 ---
 
 <BaseLayout title="学习进度" description="查看你的 Rust 学习进度">
@@ -106,30 +122,39 @@ const totalLessons = allCoursesMetadata.length;
               <ul class="space-y-2">
                 {chapter.lessons.map((lesson, lessonIndex) => (
                   <li>
-                    <a
-                      href={lesson.url}
-                      class="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                      data-lesson-slug={lesson.slug}
-                    >
-                      <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                          <span class="lesson-checkbox text-2xl">⬜</span>
-                          <div>
-                            <div class="text-gray-900 group-hover:text-primary font-medium">
-                              {index + 1}.{lessonIndex + 1} {lesson.title}
-                            </div>
-                            {lesson.duration && (
-                              <div class="text-sm text-gray-500">
-                                ⏱️ {lesson.duration} 分钟
+                    <div class="flex items-center gap-2">
+                      <a
+                        href={lesson.url}
+                        class="flex-1 block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        data-lesson-slug={lesson.slug}
+                      >
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center space-x-3">
+                            <span class="lesson-status-icon text-2xl">⬜</span>
+                            <div>
+                              <div class="text-gray-900 group-hover:text-primary font-medium">
+                                {index + 1}.{lessonIndex + 1} {lesson.title}
                               </div>
-                            )}
+                              {lesson.duration && (
+                                <div class="text-sm text-gray-500">
+                                  ⏱️ {lesson.duration} 分钟
+                                </div>
+                              )}
+                            </div>
                           </div>
+                          <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                          </svg>
                         </div>
-                        <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </a>
+                      </a>
+                      <button
+                        class="reset-lesson-btn hidden px-3 py-2 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap"
+                        data-lesson-slug={lesson.slug}
+                        title="清除该课程的学习进度"
+                      >
+                        重新学习
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -165,39 +190,117 @@ const totalLessons = allCoursesMetadata.length;
   <!-- Footer -->
   <footer class="bg-gray-900 text-gray-400 py-8">
     <div class="container mx-auto px-4 text-center">
-      <p>© 2024 Rust 学习课程 | 使用 Astro 构建</p>
+      <p>© 2024 Rust 互动教程 | 作者：雪云飞星 | 使用 Astro 构建</p>
     </div>
   </footer>
 </BaseLayout>
 
-<script>
-  // 简单的进度跟踪（使用 localStorage）
+<script define:vars={{ courseTabInfoJson }}>
+  // 解析tab信息
+  const courseTabInfo = JSON.parse(courseTabInfoJson);
+
+  /**
+   * 计算基于tab的完成进度
+   * 如果课程有tab：完成进度 = completedTabs / totalTabs
+   * 如果课程无tab：完成进度 = 0 或 1（根据completedLessons）
+   */
+  function calculateTabBasedProgress() {
+    const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+
+    let totalTabs = 0;
+    let completedTabsCount = 0;
+
+    // 遍历所有课程
+    for (const [slug, info] of Object.entries(courseTabInfo)) {
+      if (info.hasTabs) {
+        // 有tab的课程：按tab计算
+        const tabProgressKey = `tab-progress-${slug}`;
+        const tabProgress = localStorage.getItem(tabProgressKey);
+        const tabsCompleted = tabProgress ? (JSON.parse(tabProgress).completedTabs || []) : [];
+
+        totalTabs += info.tabIds.length;
+        completedTabsCount += tabsCompleted.length;
+      } else {
+        // 无tab的课程：按lesson计算（1个lesson = 1个tab）
+        totalTabs += 1;
+        if (completedLessons.includes(slug)) {
+          completedTabsCount += 1;
+        }
+      }
+    }
+
+    return { totalTabs, completedTabsCount };
+  }
+
+  /**
+   * 更新进度显示
+   */
   function updateProgress() {
     const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
-    const totalLessons = document.querySelectorAll('[data-lesson-slug]').length;
+    const { totalTabs, completedTabsCount } = calculateTabBasedProgress();
 
-    // 更新总体进度
-    const completedCount = completedLessons.length;
-    const percentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+    // 更新总体进度（基于tab）
+    const percentage = totalTabs > 0 ? Math.round((completedTabsCount / totalTabs) * 100) : 0;
 
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
     const progressPercentage = document.getElementById('progress-percentage');
 
     if (progressBar) progressBar.style.width = `${percentage}%`;
-    if (progressText) progressText.textContent = `${completedCount} / ${totalLessons}`;
+    if (progressText) progressText.textContent = `${completedTabsCount} / ${totalTabs}`;
     if (progressPercentage) progressPercentage.textContent = `${percentage}%`;
 
-    // 更新课程复选框
+    // 更新课程状态图标和按钮显示
     document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
       const slug = element.getAttribute('data-lesson-slug');
-      const checkbox = element.querySelector('.lesson-checkbox');
-      if (checkbox && completedLessons.includes(slug)) {
-        checkbox.textContent = '✅';
+      const statusIcon = element.querySelector('.lesson-status-icon');
+      const resetBtn = element.parentElement ? element.parentElement.querySelector('.reset-lesson-btn') : null;
+
+      if (statusIcon && slug) {
+        const info = courseTabInfo[slug];
+        let hasProgress = false;
+
+        if (info && info.hasTabs) {
+          // 有tab的课程：检查tab完成度
+          const tabProgressKey = `tab-progress-${slug}`;
+          const tabProgress = localStorage.getItem(tabProgressKey);
+          const tabsCompleted = tabProgress ? (JSON.parse(tabProgress).completedTabs || []) : [];
+
+          if (tabsCompleted.length === info.tabIds.length && info.tabIds.length > 0) {
+            // 所有tab都完成了
+            statusIcon.textContent = '✅';
+            hasProgress = true;
+          } else if (tabsCompleted.length > 0) {
+            // 部分tab完成
+            statusIcon.textContent = '🔵';
+            hasProgress = true;
+          } else {
+            statusIcon.textContent = '⬜';
+            hasProgress = false;
+          }
+        } else {
+          // 无tab的课程：使用原来的逻辑
+          if (completedLessons.includes(slug)) {
+            statusIcon.textContent = '✅';
+            hasProgress = true;
+          } else {
+            statusIcon.textContent = '⬜';
+            hasProgress = false;
+          }
+        }
+
+        // 根据是否有进度显示/隐藏重新学习按钮
+        if (resetBtn) {
+          if (hasProgress) {
+            resetBtn.classList.remove('hidden');
+          } else {
+            resetBtn.classList.add('hidden');
+          }
+        }
       }
     });
 
-    // 更新各章节进度
+    // 更新各章节进度（基于tab）
     const chapterProgress = new Map();
     document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
       const slug = element.getAttribute('data-lesson-slug');
@@ -209,9 +312,22 @@ const totalLessons = allCoursesMetadata.length;
       }
 
       const stats = chapterProgress.get(chapter);
-      stats.total++;
-      if (completedLessons.includes(slug)) {
-        stats.completed++;
+      const info = courseTabInfo[slug];
+
+      if (info && info.hasTabs) {
+        // 有tab的课程：按tab计算
+        const tabProgressKey = `tab-progress-${slug}`;
+        const tabProgress = localStorage.getItem(tabProgressKey);
+        const tabsCompleted = tabProgress ? (JSON.parse(tabProgress).completedTabs || []) : [];
+
+        stats.total += info.tabIds.length;
+        stats.completed += tabsCompleted.length;
+      } else {
+        // 无tab的课程：按lesson计算
+        stats.total += 1;
+        if (completedLessons.includes(slug)) {
+          stats.completed += 1;
+        }
       }
     });
 
@@ -222,7 +338,7 @@ const totalLessons = allCoursesMetadata.length;
       const stats = chapterProgress.get(chapterId);
       if (stats && stats.total > 0) {
         const chapterPercentage = Math.round((stats.completed / stats.total) * 100);
-        (bar as HTMLElement).style.width = `${chapterPercentage}%`;
+        bar.style.width = `${chapterPercentage}%`;
       }
     });
   }
@@ -232,39 +348,79 @@ const totalLessons = allCoursesMetadata.length;
 
   // 重置进度按钮
   const resetBtn = document.getElementById('reset-progress-btn');
-  resetBtn?.addEventListener('click', () => {
-    const userInput = prompt('⚠️ 此操作将清除所有学习进度！\n\n请输入"进度重置"（不含引号）以确认：');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const userInput = prompt('⚠️ 此操作将清除所有学习进度！\n\n请输入"进度重置"（不含引号）以确认：');
 
-    if (userInput === '进度重置') {
-      localStorage.removeItem('completedLessons');
+      if (userInput === '进度重置') {
+        // 清除lesson级别的进度
+        localStorage.removeItem('completedLessons');
 
-      // 触发 storage 事件通知其他页面
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'completedLessons',
-        newValue: null,
-        oldValue: localStorage.getItem('completedLessons')
-      }));
-
-      // 刷新页面显示
-      updateProgress();
-      alert('✅ 学习进度已重置！');
-    } else if (userInput !== null) {
-      // 用户输入了内容但不匹配
-      alert('❌ 输入不正确，进度重置已取消');
-    }
-    // 如果 userInput 是 null，说明用户点击了取消，什么都不做
-  });
-
-  // 点击课程时标记为完成（简单实现）
-  document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
-    element.addEventListener('click', (e) => {
-      const slug = element.getAttribute('data-lesson-slug');
-      if (slug) {
-        const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
-        if (!completedLessons.includes(slug)) {
-          completedLessons.push(slug);
-          localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
+        // 清除所有tab级别的进度
+        for (const slug in courseTabInfo) {
+          if (courseTabInfo.hasOwnProperty(slug)) {
+            const tabProgressKey = `tab-progress-${slug}`;
+            localStorage.removeItem(tabProgressKey);
+          }
         }
+
+        // 触发 storage 事件通知其他页面
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'completedLessons',
+          newValue: null,
+          oldValue: null
+        }));
+
+        // 刷新页面显示
+        updateProgress();
+        alert('✅ 学习进度已重置！');
+      } else if (userInput !== null) {
+        // 用户输入了内容但不匹配
+        alert('❌ 输入不正确，进度重置已取消');
+      }
+      // 如果 userInput 是 null，说明用户点击了取消，什么都不做
+    });
+  }
+
+  // 点击"重新学习"按钮清空课程进度
+  document.querySelectorAll('.reset-lesson-btn').forEach((button) => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const slug = button.getAttribute('data-lesson-slug');
+
+      if (slug) {
+        const info = courseTabInfo[slug];
+
+        if (info && info.hasTabs) {
+          // 有tab的课程：清空所有tab进度，并重置到第一个tab
+          const tabProgressKey = `tab-progress-${slug}`;
+          localStorage.setItem(tabProgressKey, JSON.stringify({
+            currentTab: 0,
+            completedTabs: [],
+            lastUpdated: Date.now(),
+          }));
+        } else {
+          // 无tab的课程：从completedLessons中移除
+          const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+          const index = completedLessons.indexOf(slug);
+          if (index > -1) {
+            completedLessons.splice(index, 1);
+            localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
+          }
+        }
+
+        // 触发进度更新事件
+        window.dispatchEvent(new Event('progress-updated'));
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'completedLessons',
+          newValue: localStorage.getItem('completedLessons'),
+          oldValue: null
+        }));
+
+        // 更新显示
+        updateProgress();
       }
     });
   });
