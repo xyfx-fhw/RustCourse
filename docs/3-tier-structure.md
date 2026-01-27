@@ -26,12 +26,15 @@ src/content/courses/
 src/content/courses/
 ├── 01-rust-basics/
 │   ├── 01-installation/            # 课程文件夹
+│   │   ├── index.md               # 1.1 安装 Rust（概览）
 │   │   ├── 01-linux.md            # 1.1.1 Linux 安装
 │   │   ├── 02-macos.md            # 1.1.2 macOS 安装
 │   │   └── 03-windows.md          # 1.1.3 Windows 安装
 │   ├── 02-hello-world.md          # 1.2 Hello World（无小节）
 │   └── 03-variables.md            # 1.3 变量（无小节）
 ```
+
+**重要**：使用 3级结构时，建议在课程文件夹中创建 `index.md` 作为概览页面。
 
 ## 使用方法
 
