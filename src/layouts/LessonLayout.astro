@@ -214,6 +214,14 @@ const hasTabs = tabs && tabs.length > 0;
 </style>
 
 <script define:vars={{ slug: frontmatter.slug, hasTabs }}>
+  // 记录当前访问的课程（用于"开始学习"按钮）
+  try {
+    const currentUrl = window.location.pathname;
+    localStorage.setItem('lastVisitedLesson', currentUrl);
+  } catch (error) {
+    console.error('Failed to save last visited lesson:', error);
+  }
+
   // 自动标记课程完成
   function markLessonAsCompleted() {
     try {

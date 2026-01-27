@@ -76,6 +76,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
           首页
         </a>
         <a
+          id="start-learning-link"
           href={firstLessonUrl}
           class="text-gray-700 hover:text-primary transition-colors font-medium"
         >
@@ -120,6 +121,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
         首页
       </a>
       <a
+        id="start-learning-link-mobile"
         href={firstLessonUrl}
         class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
       >
@@ -214,10 +216,31 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
   // 页面加载时更新进度
   updateHeaderProgress();
 
+  // 更新"开始学习"链接到上次学习的位置
+  function updateStartLearningLink() {
+    const lastVisitedLesson = localStorage.getItem('lastVisitedLesson');
+    if (lastVisitedLesson) {
+      const link = document.getElementById('start-learning-link');
+      const linkMobile = document.getElementById('start-learning-link-mobile');
+      if (link) {
+        link.setAttribute('href', lastVisitedLesson);
+      }
+      if (linkMobile) {
+        linkMobile.setAttribute('href', lastVisitedLesson);
+      }
+    }
+  }
+
+  // 页面加载时更新链接
+  updateStartLearningLink();
+
   // 监听 storage 变化（跨标签页同步）
   window.addEventListener('storage', (e) => {
     if (e.key === 'completedLessons' || e.key?.startsWith('tab-progress-')) {
       updateHeaderProgress();
+    }
+    if (e.key === 'lastVisitedLesson') {
+      updateStartLearningLink();
     }
   });
 
