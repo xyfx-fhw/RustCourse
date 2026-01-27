@@ -76,8 +76,8 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                             }`}
                             data-lesson-slug={lesson.metadata.slug}
                           >
+                            <span class="lesson-status text-lg mr-2 w-5 inline-block text-center">⬜</span>
                             <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
-                            {isIndexActive && <span class="lesson-status text-lg ml-2">⬜</span>}
                           </a>
                         )}
                         {!lesson.metadata && (
@@ -103,15 +103,15 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                             <li>
                               <a
                                 href={subsection.metadata.url}
-                                class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                                class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center ${
                                   isActive
                                     ? 'bg-primary text-white font-medium'
                                     : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                                 data-lesson-slug={subsection.metadata.slug}
                               >
+                                <span class="lesson-status text-lg mr-2 w-5 inline-block text-center">⬜</span>
                                 <span>{chapterIndex + 1}.{lessonIndex + 1}.{subsectionIndex + 1} {subsection.metadata.title}</span>
-                                <span class="lesson-status text-lg ml-2">⬜</span>
                               </a>
                             </li>
                           );
@@ -126,15 +126,15 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                     <li>
                       <a
                         href={lesson.metadata?.url}
-                        class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                        class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center ${
                           isActive
                             ? 'bg-primary text-white font-medium'
                             : 'text-gray-600 hover:bg-gray-100'
                         }`}
                         data-lesson-slug={lesson.metadata?.slug}
                       >
+                        <span class="lesson-status text-lg mr-2">⬜</span>
                         <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
-                        <span class="lesson-status text-lg ml-2">⬜</span>
                       </a>
                     </li>
                   );
@@ -321,12 +321,8 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
           }
         }
 
-        // 控制图标的可见性
-        if (hasProgress) {
-          statusIcon.style.display = 'inline';
-        } else {
-          statusIcon.style.display = 'none';
-        }
+        // 已读标识始终占用空间，不需要控制 display
+        // 只需设置内容为空或有 emoji
       }
     });
   }

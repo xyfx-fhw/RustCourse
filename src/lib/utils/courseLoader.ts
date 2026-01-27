@@ -166,6 +166,8 @@ export function groupByChapter(allCourses: CourseMetadata[]): Chapter[] {
       if (subsection === 'index') {
         // index.md 作为课程本身的元数据
         lessonObj.metadata = course;
+        // 更新课程标题为 index.md 的标题（中文）
+        lessonObj.title = course.title;
       } else {
         // 其他文件作为小节
         const { order, title } = parseSubsectionName(subsection);
