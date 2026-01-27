@@ -118,7 +118,7 @@ const { chapters, currentSlug } = Astro.props;
                         }`}
                         data-lesson-slug={lesson.metadata?.slug}
                       >
-                        <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
+                        <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.metadata?.title || lesson.title}</span>
                       </a>
                     </li>
                   );

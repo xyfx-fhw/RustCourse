@@ -198,7 +198,7 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
                                 {index + 1}.{lessonIndex + 1}
                               </span>
                               <span class="text-gray-900 group-hover:text-primary font-medium">
-                                {lesson.title}
+                                {lesson.metadata?.title || lesson.title}
                               </span>
                             </div>
                             {lesson.metadata?.duration && (
