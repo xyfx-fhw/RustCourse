@@ -29,7 +29,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
     <h2 class="text-lg font-bold text-gray-900 mb-4">📚 课程目录</h2>
 
     <nav class="space-y-2">
-      {chapters.map((chapter) => {
+      {chapters.map((chapter, chapterIndex) => {
         const hasActiveLesson = chapter.lessons.some(lesson => lesson.slug === currentSlug);
         return (
           <div class="space-y-1" data-chapter={chapter.id}>
@@ -38,7 +38,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
               class="chapter-toggle w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-between"
               data-chapter-id={chapter.id}
             >
-              <span>{chapter.title}</span>
+              <span>第 {chapterIndex + 1} 章：{chapter.title}</span>
               <svg class="w-4 h-4 transform transition-transform chapter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
@@ -46,7 +46,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
 
             <!-- 课程列表（可折叠） -->
             <ul class={`space-y-1 ml-2 chapter-content ${hasActiveLesson ? '' : 'hidden'}`} data-chapter-content={chapter.id}>
-              {chapter.lessons.map((lesson) => {
+              {chapter.lessons.map((lesson, lessonIndex) => {
                 const isActive = currentSlug === lesson.slug;
                 return (
                   <li>
@@ -59,7 +59,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                       }`}
                       data-lesson-slug={lesson.slug}
                     >
-                      <span>{lesson.title}</span>
+                      <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
                       <span class="lesson-status text-lg ml-2">⬜</span>
                     </a>
                   </li>
