@@ -1,12 +1,46 @@
 ---
 import { getCollection } from 'astro:content';
 import { parseTabContent } from '@/lib/utils/tabParser';
+import { groupByChapter, parseChapterName } from '@/lib/utils/courseLoader';
+import type { CourseMetadata } from '@/types/course';
 
 // 顶部导航栏
 const base = import.meta.env.BASE_URL;
 
 // 获取所有课程并计算tab信息
 const allCourses = await getCollection('courses');
+
+// 计算第一个课程的URL
+const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
+  const slugParts = c.slug.split('/');
+  const ch = slugParts[0];
+  const ls = slugParts[1];
+  const ss = slugParts.length === 3 ? slugParts[2] : undefined;
+  const chInfo = parseChapterName(ch);
+
+  return {
+    ...c.data,
+    slug: c.slug,
+    chapter: ch,
+    chapterTitle: chInfo.title,
+    lesson: ls,
+    subsection: ss,
+    url: `${base}/courses/${c.slug}`,
+  };
+});
+
+const chapters = groupByChapter(allCoursesMetadata);
+
+// 获取第一个课程/小节的URL
+let firstLessonUrl = `${base}/courses/01-rust-basics/01-installation`;
+if (chapters.length > 0 && chapters[0].lessons.length > 0) {
+  const firstLesson = chapters[0].lessons[0];
+  if (firstLesson.subsections.length > 0) {
+    firstLessonUrl = firstLesson.subsections[0].metadata.url;
+  } else if (firstLesson.metadata) {
+    firstLessonUrl = firstLesson.metadata.url;
+  }
+}
 
 // 计算tab信息：哪些课程有tab，每个tab的ID
 const courseTabInfo: Record<string, { hasTabs: boolean; tabIds: string[] }> = {};
@@ -42,7 +76,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
           首页
         </a>
         <a
-          href={`${base}/courses/01-rust-basics/01-installation`}
+          href={firstLessonUrl}
           class="text-gray-700 hover:text-primary transition-colors font-medium"
         >
           开始学习
@@ -86,7 +120,7 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
         首页
       </a>
       <a
-        href={`${base}/courses/01-rust-basics/01-installation`}
+        href={firstLessonUrl}
         class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
       >
         开始学习
