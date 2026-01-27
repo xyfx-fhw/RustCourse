@@ -1,0 +1,271 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Header from '@/components/layout/Header.astro';
+import { groupByChapter, parseChapterName } from '@/lib/utils/courseLoader';
+import type { CourseMetadata } from '@/types/course';
+
+const base = import.meta.env.BASE_URL;
+
+// 获取所有课程
+const allCourses = await getCollection('courses');
+const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
+  const [ch, ls] = c.slug.split('/');
+  const chInfo = parseChapterName(ch);
+  return {
+    ...c.data,
+    slug: c.slug,
+    chapter: ch,
+    chapterTitle: chInfo.title,
+    lesson: ls,
+    url: `${base}/courses/${c.slug}`,
+  };
+});
+
+const chapters = groupByChapter(allCoursesMetadata);
+const totalLessons = allCoursesMetadata.length;
+---
+
+<BaseLayout title="学习进度" description="查看你的 Rust 学习进度">
+  <Header />
+
+  <main class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-12">
+      <!-- 页面标题 -->
+      <div class="text-center mb-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          📊 学习进度
+        </h1>
+        <p class="text-xl text-gray-600">
+          追踪你的 Rust 学习旅程
+        </p>
+      </div>
+
+      <!-- 总体进度卡片 -->
+      <div class="max-w-4xl mx-auto mb-12">
+        <div class="card bg-gradient-to-br from-primary to-primary-dark text-white">
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h2 class="text-2xl font-bold mb-2">总体进度</h2>
+              <p class="text-blue-100">完成课程即可获得证书</p>
+            </div>
+            <div class="text-5xl">🦀</div>
+          </div>
+
+          <!-- 进度条 -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm font-medium">已完成课程</span>
+              <span class="text-sm font-medium" id="progress-text">0 / {totalLessons}</span>
+            </div>
+            <div class="w-full bg-white/20 rounded-full h-3">
+              <div
+                id="progress-bar"
+                class="bg-secondary h-3 rounded-full transition-all duration-500"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-sm">
+            <span id="progress-percentage">0%</span>
+            <span>完成 90% 即可获得证书</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 章节进度 -->
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">各章节进度</h2>
+
+        <div class="space-y-6">
+          {chapters.map((chapter, index) => (
+            <div class="card">
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <h3 class="text-xl font-bold text-gray-900 mb-2">
+                    第 {index + 1} 章：{chapter.title}
+                  </h3>
+                  <p class="text-gray-600">共 {chapter.lessons.length} 节课</p>
+                </div>
+                <span class="text-3xl">📖</span>
+              </div>
+
+              <!-- 章节进度条 -->
+              <div class="mb-4">
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    class="chapter-progress bg-primary h-2 rounded-full transition-all duration-500"
+                    data-chapter={chapter.id}
+                    style="width: 0%"
+                  ></div>
+                </div>
+              </div>
+
+              <!-- 课程列表 -->
+              <ul class="space-y-2">
+                {chapter.lessons.map((lesson, lessonIndex) => (
+                  <li>
+                    <a
+                      href={lesson.url}
+                      class="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                      data-lesson-slug={lesson.slug}
+                    >
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                          <span class="lesson-checkbox text-2xl">⬜</span>
+                          <div>
+                            <div class="text-gray-900 group-hover:text-primary font-medium">
+                              {index + 1}.{lessonIndex + 1} {lesson.title}
+                            </div>
+                            {lesson.duration && (
+                              <div class="text-sm text-gray-500">
+                                ⏱️ {lesson.duration} 分钟
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- 提示信息 -->
+      <div class="max-w-4xl mx-auto mt-12">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-blue-900 mb-2">💡 提示</h3>
+              <p class="text-blue-800">
+                学习进度自动保存在浏览器本地，清除浏览器数据会导致进度丢失。
+                完成 90% 以上的课程即可获得结业证书！
+              </p>
+            </div>
+            <button
+              id="reset-progress-btn"
+              class="ml-4 px-3 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
+              title="重置所有学习进度（需要输入确认）"
+            >
+              重置进度
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-400 py-8">
+    <div class="container mx-auto px-4 text-center">
+      <p>© 2024 Rust 学习课程 | 使用 Astro 构建</p>
+    </div>
+  </footer>
+</BaseLayout>
+
+<script>
+  // 简单的进度跟踪（使用 localStorage）
+  function updateProgress() {
+    const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+    const totalLessons = document.querySelectorAll('[data-lesson-slug]').length;
+
+    // 更新总体进度
+    const completedCount = completedLessons.length;
+    const percentage = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressPercentage = document.getElementById('progress-percentage');
+
+    if (progressBar) progressBar.style.width = `${percentage}%`;
+    if (progressText) progressText.textContent = `${completedCount} / ${totalLessons}`;
+    if (progressPercentage) progressPercentage.textContent = `${percentage}%`;
+
+    // 更新课程复选框
+    document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
+      const slug = element.getAttribute('data-lesson-slug');
+      const checkbox = element.querySelector('.lesson-checkbox');
+      if (checkbox && completedLessons.includes(slug)) {
+        checkbox.textContent = '✅';
+      }
+    });
+
+    // 更新各章节进度
+    const chapterProgress = new Map();
+    document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
+      const slug = element.getAttribute('data-lesson-slug');
+      if (!slug) return;
+
+      const chapter = slug.split('/')[0];
+      if (!chapterProgress.has(chapter)) {
+        chapterProgress.set(chapter, { total: 0, completed: 0 });
+      }
+
+      const stats = chapterProgress.get(chapter);
+      stats.total++;
+      if (completedLessons.includes(slug)) {
+        stats.completed++;
+      }
+    });
+
+    document.querySelectorAll('.chapter-progress').forEach((bar) => {
+      const chapterId = bar.getAttribute('data-chapter');
+      if (!chapterId) return;
+
+      const stats = chapterProgress.get(chapterId);
+      if (stats && stats.total > 0) {
+        const chapterPercentage = Math.round((stats.completed / stats.total) * 100);
+        (bar as HTMLElement).style.width = `${chapterPercentage}%`;
+      }
+    });
+  }
+
+  // 页面加载时更新进度
+  updateProgress();
+
+  // 重置进度按钮
+  const resetBtn = document.getElementById('reset-progress-btn');
+  resetBtn?.addEventListener('click', () => {
+    const userInput = prompt('⚠️ 此操作将清除所有学习进度！\n\n请输入"进度重置"（不含引号）以确认：');
+
+    if (userInput === '进度重置') {
+      localStorage.removeItem('completedLessons');
+
+      // 触发 storage 事件通知其他页面
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'completedLessons',
+        newValue: null,
+        oldValue: localStorage.getItem('completedLessons')
+      }));
+
+      // 刷新页面显示
+      updateProgress();
+      alert('✅ 学习进度已重置！');
+    } else if (userInput !== null) {
+      // 用户输入了内容但不匹配
+      alert('❌ 输入不正确，进度重置已取消');
+    }
+    // 如果 userInput 是 null，说明用户点击了取消，什么都不做
+  });
+
+  // 点击课程时标记为完成（简单实现）
+  document.querySelectorAll('[data-lesson-slug]').forEach((element) => {
+    element.addEventListener('click', (e) => {
+      const slug = element.getAttribute('data-lesson-slug');
+      if (slug) {
+        const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+        if (!completedLessons.includes(slug)) {
+          completedLessons.push(slug);
+          localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
+        }
+      }
+    });
+  });
+</script>

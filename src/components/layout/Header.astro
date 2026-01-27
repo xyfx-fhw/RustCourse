@@ -1,0 +1,142 @@
+---
+import { getCollection } from 'astro:content';
+
+// 顶部导航栏
+const base = import.meta.env.BASE_URL;
+
+// 获取总课程数
+const allCourses = await getCollection('courses');
+const totalLessons = allCourses.length;
+---
+
+<header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
+  <div class="container mx-auto px-4">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo 和标题 -->
+      <div class="flex items-center space-x-4">
+        <a href={base} class="flex items-center space-x-2 hover:opacity-80 transition-opacity">
+          <span class="text-3xl">🦀</span>
+          <span class="text-xl font-bold text-gray-900">Rust 学习课程</span>
+        </a>
+      </div>
+
+      <!-- 导航链接 -->
+      <nav class="hidden md:flex items-center space-x-6">
+        <a
+          href={base}
+          class="text-gray-700 hover:text-primary transition-colors font-medium"
+        >
+          首页
+        </a>
+        <a
+          href={`${base}/courses/01-rust-basics/01-installation`}
+          class="text-gray-700 hover:text-primary transition-colors font-medium"
+        >
+          开始学习
+        </a>
+        <a
+          href={`${base}/dashboard`}
+          class="text-gray-700 hover:text-primary transition-colors font-medium"
+        >
+          学习进度
+        </a>
+
+        <!-- 进度指示器（微软风格） -->
+        <div class="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 rounded-full" id="header-progress">
+          <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span class="text-sm font-medium text-primary" id="header-progress-text">0%</span>
+        </div>
+      </nav>
+
+      <!-- 移动端菜单按钮 -->
+      <button
+        id="mobile-menu-button"
+        class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+        aria-label="打开菜单"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 移动端菜单 -->
+  <div id="mobile-menu" class="hidden md:hidden border-t border-gray-200">
+    <nav class="container mx-auto px-4 py-4 space-y-2">
+      <a
+        href={base}
+        class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+      >
+        首页
+      </a>
+      <a
+        href={`${base}/courses/01-rust-basics/01-installation`}
+        class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+      >
+        开始学习
+      </a>
+      <a
+        href={`${base}/dashboard`}
+        class="block px-4 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+      >
+        学习进度
+      </a>
+    </nav>
+  </div>
+</header>
+
+<script define:vars={{ totalLessons }}>
+  // 移动端菜单切换
+  const menuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  menuButton?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+  });
+
+  // 更新 header 进度指示器
+  function updateHeaderProgress() {
+    try {
+      const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+
+      const percentage = totalLessons > 0 ? Math.round((completedLessons.length / totalLessons) * 100) : 0;
+
+      const progressText = document.getElementById('header-progress-text');
+      const progressContainer = document.getElementById('header-progress');
+
+      if (progressText) {
+        progressText.textContent = `${percentage}%`;
+      }
+
+      // 根据进度改变颜色
+      if (progressContainer) {
+        if (percentage === 100) {
+          progressContainer.className = 'flex items-center space-x-2 px-3 py-1.5 bg-green-50 rounded-full';
+          const icon = progressContainer.querySelector('svg');
+          if (icon) icon.className = 'w-4 h-4 text-green-600';
+          if (progressText) progressText.className = 'text-sm font-medium text-green-600';
+        } else if (percentage >= 50) {
+          progressContainer.className = 'flex items-center space-x-2 px-3 py-1.5 bg-yellow-50 rounded-full';
+          const icon = progressContainer.querySelector('svg');
+          if (icon) icon.className = 'w-4 h-4 text-yellow-600';
+          if (progressText) progressText.className = 'text-sm font-medium text-yellow-600';
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update header progress:', error);
+    }
+  }
+
+  // 页面加载时更新进度
+  updateHeaderProgress();
+
+  // 监听 storage 变化（跨标签页同步）
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'completedLessons') {
+      updateHeaderProgress();
+    }
+  });
+</script>

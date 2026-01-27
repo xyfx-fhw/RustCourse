@@ -1,0 +1,134 @@
+---
+import type { Chapter } from '@/types/course';
+
+interface Props {
+  chapters: Chapter[];
+  currentSlug?: string;
+}
+
+const { chapters, currentSlug } = Astro.props;
+---
+
+<aside class="w-64 bg-white border-r border-gray-200 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+  <div class="p-4">
+    <h2 class="text-lg font-bold text-gray-900 mb-4">📚 课程目录</h2>
+
+    <nav class="space-y-2">
+      {chapters.map((chapter) => {
+        const hasActiveLesson = chapter.lessons.some(lesson => lesson.slug === currentSlug);
+        return (
+          <div class="space-y-1" data-chapter={chapter.id}>
+            <!-- 章节标题（可折叠） -->
+            <button
+              class="chapter-toggle w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-between"
+              data-chapter-id={chapter.id}
+            >
+              <span>{chapter.title}</span>
+              <svg class="w-4 h-4 transform transition-transform chapter-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            <!-- 课程列表（可折叠） -->
+            <ul class={`space-y-1 ml-2 chapter-content ${hasActiveLesson ? '' : 'hidden'}`} data-chapter-content={chapter.id}>
+              {chapter.lessons.map((lesson) => {
+                const isActive = currentSlug === lesson.slug;
+                return (
+                  <li>
+                    <a
+                      href={lesson.url}
+                      class={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary text-white font-medium'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {lesson.title}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
+    </nav>
+  </div>
+</aside>
+
+<!-- 移动端侧边栏 (可滑出) -->
+<style>
+  @media (max-width: 768px) {
+    aside {
+      position: fixed;
+      top: 64px; /* Header 高度 */
+      left: -100%;
+      bottom: 0;
+      transition: left 0.3s ease-in-out;
+      z-index: 40;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+    }
+
+    aside.open {
+      left: 0;
+    }
+  }
+
+  /* 折叠状态的图标旋转 */
+  .chapter-content.hidden ~ .chapter-toggle .chapter-icon,
+  .chapter-toggle[data-collapsed="true"] .chapter-icon {
+    transform: rotate(-90deg);
+  }
+</style>
+
+<script>
+  // 章节折叠/展开功能
+  function initChapterToggle() {
+    // 从 localStorage 恢复折叠状态
+    const collapsedChapters = JSON.parse(localStorage.getItem('collapsedChapters') || '[]');
+
+    collapsedChapters.forEach((chapterId: string) => {
+      const content = document.querySelector(`[data-chapter-content="${chapterId}"]`);
+      const button = document.querySelector(`[data-chapter-id="${chapterId}"]`);
+      if (content) {
+        content.classList.add('hidden');
+      }
+      if (button) {
+        button.setAttribute('data-collapsed', 'true');
+      }
+    });
+
+    // 绑定点击事件
+    document.querySelectorAll('.chapter-toggle').forEach((button) => {
+      button.addEventListener('click', (e) => {
+        const chapterId = button.getAttribute('data-chapter-id');
+        const content = document.querySelector(`[data-chapter-content="${chapterId}"]`);
+
+        if (content) {
+          const isHidden = content.classList.contains('hidden');
+          content.classList.toggle('hidden');
+          button.setAttribute('data-collapsed', isHidden ? 'false' : 'true');
+
+          // 保存状态到 localStorage
+          const collapsedChapters = JSON.parse(localStorage.getItem('collapsedChapters') || '[]');
+          if (isHidden) {
+            // 展开，从列表中移除
+            const index = collapsedChapters.indexOf(chapterId);
+            if (index > -1) {
+              collapsedChapters.splice(index, 1);
+            }
+          } else {
+            // 折叠，添加到列表
+            if (!collapsedChapters.includes(chapterId)) {
+              collapsedChapters.push(chapterId);
+            }
+          }
+          localStorage.setItem('collapsedChapters', JSON.stringify(collapsedChapters));
+        }
+      });
+    });
+  }
+
+  // 页面加载时初始化
+  initChapterToggle();
+</script>

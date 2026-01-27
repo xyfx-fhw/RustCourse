@@ -1,0 +1,107 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+
+// 只显示 h2 和 h3 标题
+const filteredHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
+---
+
+{filteredHeadings.length > 0 && (
+  <nav class="max-h-full overflow-y-auto">
+    <h3 class="text-sm font-bold text-gray-900 mb-4 px-4">📑 目录</h3>
+    <ul class="space-y-1 text-sm">
+      {filteredHeadings.map((heading) => (
+        <li
+          class={heading.depth === 2 ? 'pl-4' : 'pl-8'}
+          data-heading-slug={heading.slug}
+        >
+          <a
+            href={`#${heading.slug}`}
+            class="block py-1.5 text-gray-600 hover:text-primary transition-colors rounded hover:bg-gray-50 px-2"
+          >
+            {heading.text}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<style>
+  /* 滚动条样式 */
+  nav::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  nav::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  nav::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+  }
+
+  nav::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+</style>
+
+<script>
+  // 平滑滚动，带偏移量（补偿固定的 header）
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const targetId = this.getAttribute('href');
+      const target = document.querySelector(targetId);
+      if (target) {
+        // header 高度是 64px (h-16)，再加 20px 的额外间距
+        const headerOffset = 84;
+        const elementPosition = target.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    });
+  });
+
+  // 滚动时高亮当前标题
+  function updateActiveHeading() {
+    const headings = document.querySelectorAll('article h2[id], article h3[id]');
+    const tocLinks = document.querySelectorAll('[data-heading-slug] a');
+
+    let currentHeading = '';
+
+    headings.forEach((heading) => {
+      const rect = heading.getBoundingClientRect();
+      // 考虑 header 的高度，当标题在视口上方 100px 时就认为是当前标题
+      if (rect.top <= 100) {
+        currentHeading = heading.id;
+      }
+    });
+
+    tocLinks.forEach((link) => {
+      const href = link.getAttribute('href')?.substring(1);
+      if (href === currentHeading) {
+        link.classList.add('text-primary', 'font-medium', 'bg-blue-50');
+        link.classList.remove('text-gray-600');
+      } else {
+        link.classList.remove('text-primary', 'font-medium', 'bg-blue-50');
+        link.classList.add('text-gray-600');
+      }
+    });
+  }
+
+  // 监听滚动
+  window.addEventListener('scroll', updateActiveHeading);
+  // 初始化
+  updateActiveHeading();
+</script>

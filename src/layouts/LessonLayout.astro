@@ -1,0 +1,235 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Header from '@/components/layout/Header.astro';
+import Sidebar from '@/components/layout/Sidebar.astro';
+import TableOfContents from '@/components/layout/TableOfContents.astro';
+import CodePlayground from '@/components/interactive/CodePlayground';
+import type { CourseMetadata, Chapter } from '@/types/course';
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  frontmatter: CourseMetadata;
+  chapters: Chapter[];
+  prevLesson?: CourseMetadata | null;
+  nextLesson?: CourseMetadata | null;
+  headings: MarkdownHeading[];
+}
+
+const { frontmatter, chapters, prevLesson, nextLesson, headings } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const hasPlayground = frontmatter.hasPlayground || false;
+const defaultCode = frontmatter.defaultCode || 'fn main() {\n    println!("Hello, world!");\n}';
+---
+
+<BaseLayout title={frontmatter.title} description={frontmatter.description}>
+  <div class="min-h-screen flex flex-col">
+    <Header />
+
+    <div class="flex-1 flex">
+      <!-- 侧边栏 -->
+      <Sidebar chapters={chapters} currentSlug={frontmatter.slug} />
+
+      <!-- 主内容区 -->
+      <main class="flex-1">
+        <div class="flex max-w-[1600px] mx-auto">
+          <!-- 文章内容 -->
+          <div class="flex-1 min-w-0">
+            <div class="container mx-auto px-4 py-8 max-w-4xl">
+          <!-- 面包屑导航 -->
+          <nav class="text-sm text-gray-600 mb-6">
+            <a href={base} class="hover:text-primary">首页</a>
+            <span class="mx-2">/</span>
+            <span>{frontmatter.chapterTitle}</span>
+            <span class="mx-2">/</span>
+            <span class="text-gray-900 font-medium">{frontmatter.title}</span>
+          </nav>
+
+          <!-- 课程元信息 -->
+          <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">
+              {frontmatter.title}
+            </h1>
+            <p class="text-lg text-gray-600 mb-4">
+              {frontmatter.description}
+            </p>
+
+            <div class="flex flex-wrap gap-3 text-sm">
+              {frontmatter.duration && (
+                <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded-full">
+                  ⏱️ {frontmatter.duration} 分钟
+                </span>
+              )}
+              {frontmatter.difficulty && (
+                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full">
+                  📊 {frontmatter.difficulty === 'beginner' ? '初级' : frontmatter.difficulty === 'intermediate' ? '中级' : '高级'}
+                </span>
+              )}
+              {frontmatter.tags && frontmatter.tags.map((tag) => (
+                <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <!-- 课程内容 -->
+          <article class="prose prose-lg max-w-none mb-12">
+            <slot />
+          </article>
+
+          <!-- 代码编辑器（嵌入式） -->
+          {hasPlayground && (
+            <div class="my-12">
+              <h2 class="text-2xl font-bold text-gray-900 mb-4">💻 在线实践</h2>
+              <div class="border border-gray-200 rounded-lg overflow-hidden shadow-lg">
+                <CodePlayground defaultCode={defaultCode} client:load />
+              </div>
+            </div>
+          )}
+
+          <!-- 上一页/下一页导航 -->
+          <nav class="border-t border-gray-200 pt-8 mt-12">
+            <div class="flex justify-between items-center">
+              <div class="flex-1">
+                {prevLesson && (
+                  <a
+                    href={prevLesson.url}
+                    class="inline-flex items-center text-primary hover:text-primary-dark transition-colors group"
+                  >
+                    <svg class="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    <div class="text-left">
+                      <div class="text-xs text-gray-500">上一课</div>
+                      <div class="font-medium">{prevLesson.title}</div>
+                    </div>
+                  </a>
+                )}
+              </div>
+
+              <div class="flex-1 text-right">
+                {nextLesson && (
+                  <a
+                    href={nextLesson.url}
+                    class="inline-flex items-center text-primary hover:text-primary-dark transition-colors group"
+                  >
+                    <div class="text-right">
+                      <div class="text-xs text-gray-500">下一课</div>
+                      <div class="font-medium">{nextLesson.title}</div>
+                    </div>
+                    <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </a>
+                )}
+              </div>
+            </div>
+          </nav>
+            </div>
+          </div>
+
+          <!-- 右侧目录 -->
+          <aside class="hidden xl:block w-64 pl-8 py-8 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+            <TableOfContents headings={headings} />
+          </aside>
+        </div>
+      </main>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  /* 为 Markdown 内容添加样式 */
+  article :global(h2) {
+    @apply text-3xl font-bold mt-12 mb-4 pb-2 border-b border-gray-200;
+  }
+
+  article :global(h3) {
+    @apply text-2xl font-bold mt-8 mb-3;
+  }
+
+  article :global(p) {
+    @apply mb-4 leading-relaxed text-gray-700;
+  }
+
+  article :global(ul),
+  article :global(ol) {
+    @apply mb-4 pl-6;
+  }
+
+  article :global(li) {
+    @apply mb-2;
+  }
+
+  article :global(code) {
+    @apply bg-gray-100 px-2 py-1 rounded text-sm font-mono text-gray-800;
+  }
+
+  article :global(pre) {
+    @apply p-4 rounded-lg overflow-x-auto my-6 bg-gray-900;
+  }
+
+  article :global(pre code) {
+    @apply bg-transparent p-0 text-gray-100;
+  }
+
+  article :global(blockquote) {
+    @apply border-l-4 border-primary bg-blue-50 pl-4 py-2 my-4 italic;
+  }
+
+  article :global(a) {
+    @apply text-primary hover:text-primary-dark underline;
+  }
+
+  article :global(strong) {
+    @apply font-bold text-gray-900;
+  }
+
+  article :global(img) {
+    @apply rounded-lg shadow-md my-6;
+  }
+</style>
+
+<script define:vars={{ slug: frontmatter.slug }}>
+  // 自动标记课程完成
+  function markLessonAsCompleted() {
+    try {
+      const completedLessons = JSON.parse(localStorage.getItem('completedLessons') || '[]');
+
+      if (!completedLessons.includes(slug)) {
+        completedLessons.push(slug);
+        localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
+
+        // 触发 storage 事件以更新其他页面
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'completedLessons',
+          newValue: JSON.stringify(completedLessons),
+          oldValue: JSON.stringify(completedLessons.slice(0, -1))
+        }));
+
+        console.log('✅ 课程已标记为完成:', slug);
+      }
+    } catch (error) {
+      console.error('Failed to mark lesson as completed:', error);
+    }
+  }
+
+  // 检测用户是否滚动到页面底部
+  function checkScrollCompletion() {
+    const scrolled = window.scrollY + window.innerHeight;
+    const height = document.documentElement.scrollHeight;
+
+    // 当滚动到页面 80% 时标记为完成
+    if (scrolled >= height * 0.8) {
+      markLessonAsCompleted();
+      // 移除监听器，避免重复标记
+      window.removeEventListener('scroll', checkScrollCompletion);
+    }
+  }
+
+  // 页面加载后添加滚动监听
+  window.addEventListener('scroll', checkScrollCompletion);
+
+  // 如果页面很短，立即检查
+  setTimeout(checkScrollCompletion, 1000);
+</script>

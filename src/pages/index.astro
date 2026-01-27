@@ -1,0 +1,171 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Header from '@/components/layout/Header.astro';
+import { groupByChapter, parseChapterName } from '@/lib/utils/courseLoader';
+import type { CourseMetadata } from '@/types/course';
+
+const base = import.meta.env.BASE_URL;
+
+// 获取所有课程
+const allCourses = await getCollection('courses');
+const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
+  const [ch, ls] = c.slug.split('/');
+  const chInfo = parseChapterName(ch);
+  return {
+    ...c.data,
+    slug: c.slug,
+    chapter: ch,
+    chapterTitle: chInfo.title,
+    lesson: ls,
+    url: `${base}/courses/${c.slug}`,
+  };
+});
+
+const chapters = groupByChapter(allCoursesMetadata);
+const totalLessons = allCoursesMetadata.length;
+---
+
+<BaseLayout>
+  <Header />
+
+  <main class="min-h-screen">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-br from-primary to-primary-dark text-white py-20">
+      <div class="container mx-auto px-4 text-center">
+        <h1 class="text-5xl md:text-6xl font-bold mb-6">
+          🦀 Rust 学习课程
+        </h1>
+        <p class="text-xl md:text-2xl mb-8 text-blue-100">
+          从零开始，系统学习 Rust 编程语言
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <a
+            href={`${base}/courses/01-rust-basics/01-installation`}
+            class="btn btn-secondary text-lg px-8 py-3 inline-block"
+          >
+            开始学习 →
+          </a>
+          <a
+            href="#courses"
+            class="btn bg-white/10 hover:bg-white/20 text-white text-lg px-8 py-3 inline-block"
+          >
+            查看课程
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 特性介绍 -->
+    <section class="py-16 bg-white">
+      <div class="container mx-auto px-4">
+        <div class="grid md:grid-cols-3 gap-8">
+          <div class="text-center">
+            <div class="text-4xl mb-4">📚</div>
+            <h3 class="text-xl font-bold mb-2">系统化学习</h3>
+            <p class="text-gray-600">从基础到进阶，循序渐进的课程体系</p>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl mb-4">💡</div>
+            <h3 class="text-xl font-bold mb-2">实践导向</h3>
+            <p class="text-gray-600">每节课都有实践练习，边学边练</p>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl mb-4">✅</div>
+            <h3 class="text-xl font-bold mb-2">进度跟踪</h3>
+            <p class="text-gray-600">自动记录学习进度，随时查看</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 课程列表 -->
+    <section id="courses" class="py-16 bg-gray-50">
+      <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">课程内容</h2>
+
+        <div class="max-w-4xl mx-auto space-y-8">
+          {chapters.map((chapter, index) => (
+            <div class="card">
+              <div class="flex items-start justify-between mb-4">
+                <div>
+                  <h3 class="text-2xl font-bold text-gray-900 mb-2">
+                    第 {index + 1} 章：{chapter.title}
+                  </h3>
+                  <p class="text-gray-600">
+                    共 {chapter.lessons.length} 节课
+                  </p>
+                </div>
+                <span class="text-3xl">📖</span>
+              </div>
+
+              <ul class="space-y-2">
+                {chapter.lessons.map((lesson, lessonIndex) => (
+                  <li>
+                    <a
+                      href={lesson.url}
+                      class="block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                    >
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                          <span class="text-gray-400 font-medium">
+                            {index + 1}.{lessonIndex + 1}
+                          </span>
+                          <span class="text-gray-900 group-hover:text-primary font-medium">
+                            {lesson.title}
+                          </span>
+                        </div>
+                        {lesson.duration && (
+                          <span class="text-sm text-gray-500">
+                            {lesson.duration} 分钟
+                          </span>
+                        )}
+                      </div>
+                      {lesson.description && (
+                        <p class="text-sm text-gray-600 mt-1 ml-12">
+                          {lesson.description}
+                        </p>
+                      )}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="mt-12 text-center">
+          <p class="text-gray-600">
+            共 <span class="font-bold text-primary">{chapters.length}</span> 章
+            <span class="mx-2">|</span>
+            <span class="font-bold text-primary">{totalLessons}</span> 节课程
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-16 bg-primary text-white">
+      <div class="container mx-auto px-4 text-center">
+        <h2 class="text-3xl font-bold mb-4">准备好开始学习了吗？</h2>
+        <p class="text-xl text-blue-100 mb-8">
+          现在就开始你的 Rust 学习之旅
+        </p>
+        <a
+          href={`${base}/courses/01-rust-basics/01-installation`}
+          class="btn btn-secondary text-lg px-8 py-3 inline-block"
+        >
+          开始第一课 →
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-400 py-8">
+    <div class="container mx-auto px-4 text-center">
+      <p>© 2024 Rust 学习课程 | 使用 Astro 构建</p>
+    </div>
+  </footer>
+</BaseLayout>

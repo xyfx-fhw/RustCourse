@@ -1,0 +1,68 @@
+---
+import { getCollection } from 'astro:content';
+import LessonLayout from '@/layouts/LessonLayout.astro';
+import type { CourseMetadata } from '@/types/course';
+import { parseChapterName, parseLessonName, groupByChapter, findAdjacentLessons } from '@/lib/utils/courseLoader';
+
+const base = import.meta.env.BASE_URL;
+
+export async function getStaticPaths() {
+  const courses = await getCollection('courses');
+  const base = import.meta.env.BASE_URL;
+
+  return courses.map((course) => {
+    const [chapter, lesson] = course.slug.split('/');
+
+    return {
+      params: { slug: course.slug },
+      props: { course },
+    };
+  });
+}
+
+const { course } = Astro.props;
+const { Content, headings } = await course.render();
+
+// 解析课程信息
+const [chapter, lesson] = course.slug.split('/');
+const chapterInfo = parseChapterName(chapter);
+const lessonInfo = parseLessonName(lesson);
+
+// 构建完整的课程元数据
+const courseMetadata: CourseMetadata = {
+  ...course.data,
+  slug: course.slug,
+  chapter,
+  chapterTitle: chapterInfo.title,
+  lesson,
+  url: `${base}/courses/${course.slug}`,
+};
+
+// 获取所有课程并分组
+const allCourses = await getCollection('courses');
+const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
+  const [ch, ls] = c.slug.split('/');
+  const chInfo = parseChapterName(ch);
+  return {
+    ...c.data,
+    slug: c.slug,
+    chapter: ch,
+    chapterTitle: chInfo.title,
+    lesson: ls,
+    url: `${base}/courses/${c.slug}`,
+  };
+});
+
+const chapters = groupByChapter(allCoursesMetadata);
+const { prev, next } = findAdjacentLessons(course.slug, allCoursesMetadata);
+---
+
+<LessonLayout
+  frontmatter={courseMetadata}
+  chapters={chapters}
+  prevLesson={prev}
+  nextLesson={next}
+  headings={headings}
+>
+  <Content />
+</LessonLayout>
