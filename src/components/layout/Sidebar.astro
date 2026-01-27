@@ -166,15 +166,15 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
         let hasProgress = false;
 
         if (info && info.hasTabs) {
-          // 有 tab 的课程：检查 tab 完成情况
+          // 有 tab 的课程：只检查 tab 完成情况，不检查 completedLessons
           const tabProgress = localStorage.getItem(`tab-progress-${slug}`);
           const tabsCompleted = tabProgress ? JSON.parse(tabProgress).completedTabs || [] : [];
 
           if (tabsCompleted.length === info.tabIds.length && info.tabIds.length > 0) {
-            statusIcon.textContent = '✅'; // 全部完成
+            statusIcon.textContent = '✅'; // 全部 Tab 完成
             hasProgress = true;
           } else if (tabsCompleted.length > 0) {
-            statusIcon.textContent = '🔵'; // 部分完成
+            statusIcon.textContent = '🔵'; // 部分 Tab 完成
             hasProgress = true;
           } else {
             statusIcon.textContent = ''; // 未开始，不显示
@@ -182,7 +182,8 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
           }
         } else {
           // 没有 tab 的课程：检查课程完成状态
-          if (completedLessons.includes(slug)) {
+          const isCompleted = completedLessons.includes(slug);
+          if (isCompleted) {
             statusIcon.textContent = '✅';
             hasProgress = true;
           } else {

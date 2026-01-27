@@ -78,12 +78,14 @@ const hasTabs = tabs && tabs.length > 0;
             <TabNavigation
               tabs={tabs!.map(t => ({ id: t.id, title: t.title }))}
               currentSlug={frontmatter.slug}
-              onTabChange={(tabId) => {
-                // 触发tab切换事件
-                const event = new CustomEvent('tab-change', {
-                  detail: { tabId }
-                });
-                window.dispatchEvent(event);
+              onTabChange={(tabId: string) => {
+                // 这个函数在客户端执行，触发tab切换事件
+                if (typeof window !== 'undefined') {
+                  const event = new CustomEvent('tab-change', {
+                    detail: { tabId }
+                  });
+                  window.dispatchEvent(event);
+                }
               }}
               client:load
             />
@@ -211,7 +213,7 @@ const hasTabs = tabs && tabs.length > 0;
   }
 </style>
 
-<script define:vars={{ slug: frontmatter.slug }}>
+<script define:vars={{ slug: frontmatter.slug, hasTabs }}>
   // 自动标记课程完成
   function markLessonAsCompleted() {
     try {
@@ -221,12 +223,8 @@ const hasTabs = tabs && tabs.length > 0;
         completedLessons.push(slug);
         localStorage.setItem('completedLessons', JSON.stringify(completedLessons));
 
-        // 触发 storage 事件以更新其他页面
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'completedLessons',
-          newValue: JSON.stringify(completedLessons),
-          oldValue: JSON.stringify(completedLessons.slice(0, -1))
-        }));
+        // 触发 progress-updated 事件通知 Sidebar 更新
+        window.dispatchEvent(new Event('progress-updated'));
 
         console.log('✅ 课程已标记为完成:', slug);
       }
@@ -248,11 +246,15 @@ const hasTabs = tabs && tabs.length > 0;
     }
   }
 
-  // 页面加载后添加滚动监听
-  window.addEventListener('scroll', checkScrollCompletion);
+  // 只有没有 Tab 的课程才启用滚动完成检测
+  // 有 Tab 的课程通过切换 Tab 来标记进度
+  if (!hasTabs) {
+    // 页面加载后添加滚动监听
+    window.addEventListener('scroll', checkScrollCompletion);
 
-  // 如果页面很短，立即检查
-  setTimeout(checkScrollCompletion, 1000);
+    // 如果页面很短，立即检查
+    setTimeout(checkScrollCompletion, 1000);
+  }
 </script>
 
 <!-- Tab内容控制脚本 -->
@@ -329,6 +331,53 @@ const hasTabs = tabs && tabs.length > 0;
           }
         }
       });
+
+      // 为有 Tab 的课程添加滚动检测，标记当前 Tab 为已完成
+      let lastMarkedTab = -1;
+      function checkTabScrollCompletion() {
+        const scrolled = window.scrollY + window.innerHeight;
+        const height = document.documentElement.scrollHeight;
+
+        // 当滚动到页面 80% 时标记当前 Tab 为完成
+        if (scrolled >= height * 0.8) {
+          const key = `tab-progress-${slug}`;
+          const saved = localStorage.getItem(key);
+
+          try {
+            const progress = saved ? JSON.parse(saved) : { currentTab: 0, completedTabs: [] };
+            const currentTab = progress.currentTab || 0;
+
+            // 避免重复标记同一个 tab
+            if (currentTab !== lastMarkedTab && !progress.completedTabs.includes(currentTab)) {
+              progress.completedTabs.push(currentTab);
+              localStorage.setItem(key, JSON.stringify({
+                currentTab: currentTab,
+                completedTabs: progress.completedTabs,
+                lastUpdated: Date.now(),
+              }));
+
+              // 触发进度更新事件
+              window.dispatchEvent(new Event('progress-updated'));
+
+              lastMarkedTab = currentTab;
+              console.log(`✅ Tab ${currentTab} 已标记为完成`);
+            }
+          } catch (e) {
+            console.error('Failed to mark tab as completed:', e);
+          }
+        }
+      }
+
+      // 添加滚动监听
+      window.addEventListener('scroll', checkTabScrollCompletion);
+      // 页面加载后立即检查一次
+      setTimeout(checkTabScrollCompletion, 1000);
+
+      // Tab 切换时重置标记状态并检查新 Tab
+      window.addEventListener('tab-change', () => {
+        lastMarkedTab = -1;
+        setTimeout(checkTabScrollCompletion, 100);
+      });
     }
   }
 </script>
@@ -360,10 +409,22 @@ const hasTabs = tabs && tabs.length > 0;
         });
         window.dispatchEvent(event);
 
-        // 保存 tab 进度
+        // 保存 tab 进度，保留现有的 completedTabs
         const key = `tab-progress-${slug}`;
+        const saved = localStorage.getItem(key);
+        let existingProgress = { currentTab: 0, completedTabs: [] };
+
+        if (saved) {
+          try {
+            existingProgress = JSON.parse(saved);
+          } catch (e) {
+            console.error('Failed to parse existing progress:', e);
+          }
+        }
+
         localStorage.setItem(key, JSON.stringify({
           currentTab: tabIndex,
+          completedTabs: existingProgress.completedTabs || [],
           lastUpdated: Date.now(),
         }));
 
