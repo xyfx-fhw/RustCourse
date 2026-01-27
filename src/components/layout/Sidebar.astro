@@ -30,7 +30,14 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
 
     <nav class="space-y-2">
       {chapters.map((chapter, chapterIndex) => {
-        const hasActiveLesson = chapter.lessons.some(lesson => lesson.slug === currentSlug);
+        // 判断章节是否有活动的课程或小节
+        const hasActiveItem = chapter.lessons.some(lesson => {
+          if (lesson.subsections.length > 0) {
+            return lesson.subsections.some(sub => sub.metadata.slug === currentSlug);
+          }
+          return lesson.metadata?.slug === currentSlug;
+        });
+
         return (
           <div class="space-y-1" data-chapter={chapter.id}>
             <!-- 章节标题（可折叠） -->
@@ -45,25 +52,72 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
             </button>
 
             <!-- 课程列表（可折叠） -->
-            <ul class={`space-y-1 ml-2 chapter-content ${hasActiveLesson ? '' : 'hidden'}`} data-chapter-content={chapter.id}>
+            <ul class={`space-y-1 ml-2 chapter-content ${hasActiveItem ? '' : 'hidden'}`} data-chapter-content={chapter.id}>
               {chapter.lessons.map((lesson, lessonIndex) => {
-                const isActive = currentSlug === lesson.slug;
-                return (
-                  <li>
-                    <a
-                      href={lesson.url}
-                      class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
-                        isActive
-                          ? 'bg-primary text-white font-medium'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                      data-lesson-slug={lesson.slug}
-                    >
-                      <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
-                      <span class="lesson-status text-lg ml-2">⬜</span>
-                    </a>
-                  </li>
-                );
+                // 判断是否有小节
+                const hasSubsections = lesson.subsections.length > 0;
+
+                if (hasSubsections) {
+                  // 有小节：渲染可折叠的课程和小节列表
+                  const hasActiveSubsection = lesson.subsections.some(sub => sub.metadata.slug === currentSlug);
+
+                  return (
+                    <li class="space-y-1">
+                      <!-- 课程标题（可折叠） -->
+                      <button
+                        class="lesson-toggle w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-between"
+                        data-lesson-id={`${chapter.id}-${lesson.id}`}
+                      >
+                        <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
+                        <svg class="w-3 h-3 transform transition-transform lesson-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      <!-- 小节列表 -->
+                      <ul class={`space-y-1 ml-4 lesson-content ${hasActiveSubsection ? '' : 'hidden'}`} data-lesson-content={`${chapter.id}-${lesson.id}`}>
+                        {lesson.subsections.map((subsection, subsectionIndex) => {
+                          const isActive = currentSlug === subsection.metadata.slug;
+                          return (
+                            <li>
+                              <a
+                                href={subsection.metadata.url}
+                                class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                                  isActive
+                                    ? 'bg-primary text-white font-medium'
+                                    : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                                data-lesson-slug={subsection.metadata.slug}
+                              >
+                                <span>{chapterIndex + 1}.{lessonIndex + 1}.{subsectionIndex + 1} {subsection.title}</span>
+                                <span class="lesson-status text-lg ml-2">⬜</span>
+                              </a>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </li>
+                  );
+                } else {
+                  // 没有小节：直接渲染课程链接
+                  const isActive = currentSlug === lesson.metadata?.slug;
+                  return (
+                    <li>
+                      <a
+                        href={lesson.metadata?.url}
+                        class={`block px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${
+                          isActive
+                            ? 'bg-primary text-white font-medium'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                        data-lesson-slug={lesson.metadata?.slug}
+                      >
+                        <span>{chapterIndex + 1}.{lessonIndex + 1} {lesson.title}</span>
+                        <span class="lesson-status text-lg ml-2">⬜</span>
+                      </a>
+                    </li>
+                  );
+                }
               })}
             </ul>
           </div>
@@ -94,6 +148,12 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
   /* 折叠状态的图标旋转 */
   .chapter-content.hidden ~ .chapter-toggle .chapter-icon,
   .chapter-toggle[data-collapsed="true"] .chapter-icon {
+    transform: rotate(-90deg);
+  }
+
+  /* 课程级别折叠图标旋转 */
+  .lesson-content.hidden ~ .lesson-toggle .lesson-icon,
+  .lesson-toggle[data-collapsed="true"] .lesson-icon {
     transform: rotate(-90deg);
   }
 </style>
@@ -146,8 +206,56 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
     });
   }
 
+  // 课程级别折叠/展开功能
+  function initLessonToggle() {
+    // 从 localStorage 恢复折叠状态
+    const collapsedLessons = JSON.parse(localStorage.getItem('collapsedLessons') || '[]');
+
+    collapsedLessons.forEach((lessonId: string) => {
+      const content = document.querySelector(`[data-lesson-content="${lessonId}"]`);
+      const button = document.querySelector(`[data-lesson-id="${lessonId}"]`);
+      if (content) {
+        content.classList.add('hidden');
+      }
+      if (button) {
+        button.setAttribute('data-collapsed', 'true');
+      }
+    });
+
+    // 绑定点击事件
+    document.querySelectorAll('.lesson-toggle').forEach((button) => {
+      button.addEventListener('click', (e) => {
+        const lessonId = button.getAttribute('data-lesson-id');
+        const content = document.querySelector(`[data-lesson-content="${lessonId}"]`);
+
+        if (content) {
+          const isHidden = content.classList.contains('hidden');
+          content.classList.toggle('hidden');
+          button.setAttribute('data-collapsed', isHidden ? 'false' : 'true');
+
+          // 保存状态到 localStorage
+          const collapsedLessons = JSON.parse(localStorage.getItem('collapsedLessons') || '[]');
+          if (isHidden) {
+            // 展开，从列表中移除
+            const index = collapsedLessons.indexOf(lessonId);
+            if (index > -1) {
+              collapsedLessons.splice(index, 1);
+            }
+          } else {
+            // 折叠，添加到列表
+            if (!collapsedLessons.includes(lessonId)) {
+              collapsedLessons.push(lessonId);
+            }
+          }
+          localStorage.setItem('collapsedLessons', JSON.stringify(collapsedLessons));
+        }
+      });
+    });
+  }
+
   // 页面加载时初始化
   initChapterToggle();
+  initLessonToggle();
 </script>
 
 <!-- 课程进度状态更新脚本 -->

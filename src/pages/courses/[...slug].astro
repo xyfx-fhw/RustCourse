@@ -2,7 +2,7 @@
 import { getCollection } from 'astro:content';
 import LessonLayout from '@/layouts/LessonLayout.astro';
 import type { CourseMetadata } from '@/types/course';
-import { parseChapterName, parseLessonName, groupByChapter, findAdjacentLessons } from '@/lib/utils/courseLoader';
+import { parseChapterName, parseLessonName, parseSubsectionName, groupByChapter, findAdjacentLessons } from '@/lib/utils/courseLoader';
 import { parseTabContent } from '@/lib/utils/tabParser';
 
 const base = import.meta.env.BASE_URL;
@@ -31,9 +31,14 @@ const rawContent = course.body;
 const tabs = parseTabContent(rawContent);
 
 // 解析课程信息
-const [chapter, lesson] = course.slug.split('/');
+const slug = course.slug.split('/');
+const chapter = slug[0];
+const lesson = slug[1];
+const subsection = slug.length === 3 ? slug[2] : undefined;
+
 const chapterInfo = parseChapterName(chapter);
 const lessonInfo = parseLessonName(lesson);
+const subsectionInfo = subsection ? parseSubsectionName(subsection) : null;
 
 // 构建完整的课程元数据
 const courseMetadata: CourseMetadata = {
@@ -42,20 +47,30 @@ const courseMetadata: CourseMetadata = {
   chapter,
   chapterTitle: chapterInfo.title,
   lesson,
+  subsection,
+  subsectionTitle: subsectionInfo?.title,
   url: `${base}/courses/${course.slug}`,
 };
 
 // 获取所有课程并分组
 const allCourses = await getCollection('courses');
 const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
-  const [ch, ls] = c.slug.split('/');
+  const slugParts = c.slug.split('/');
+  const ch = slugParts[0];
+  const ls = slugParts[1];
+  const ss = slugParts.length === 3 ? slugParts[2] : undefined;
+
   const chInfo = parseChapterName(ch);
+  const ssInfo = ss ? parseSubsectionName(ss) : null;
+
   return {
     ...c.data,
     slug: c.slug,
     chapter: ch,
     chapterTitle: chInfo.title,
     lesson: ls,
+    subsection: ss,
+    subsectionTitle: ssInfo?.title,
     url: `${base}/courses/${c.slug}`,
   };
 });

@@ -1,18 +1,28 @@
-import type { CourseMetadata, Chapter, Heading } from '@/types/course';
+import type { CourseMetadata, Chapter, Lesson, Subsection, Heading } from '@/types/course';
 
 /**
- * 从文件路径提取章节和课程信息
- * 例如: "01-rust-basics/02-hello-world" => { chapter: "01-rust-basics", lesson: "02-hello-world" }
+ * 从文件路径提取章节、课程和小节信息
+ * 支持2级: "01-rust-basics/02-hello-world" => { chapter: "01-rust-basics", lesson: "02-hello-world" }
+ * 支持3级: "01-rust-basics/01-installation/01-linux" => { chapter: "01-rust-basics", lesson: "01-installation", subsection: "01-linux" }
  */
-export function parseSlug(slug: string): { chapter: string; lesson: string } {
+export function parseSlug(slug: string): { chapter: string; lesson: string; subsection?: string } {
   const parts = slug.split('/');
-  if (parts.length !== 2) {
-    throw new Error(`Invalid slug format: ${slug}. Expected: "chapter/lesson"`);
+  if (parts.length === 2) {
+    // 2级结构: chapter/lesson
+    return {
+      chapter: parts[0],
+      lesson: parts[1],
+    };
+  } else if (parts.length === 3) {
+    // 3级结构: chapter/lesson/subsection
+    return {
+      chapter: parts[0],
+      lesson: parts[1],
+      subsection: parts[2],
+    };
+  } else {
+    throw new Error(`Invalid slug format: ${slug}. Expected: "chapter/lesson" or "chapter/lesson/subsection"`);
   }
-  return {
-    chapter: parts[0],
-    lesson: parts[1],
-  };
 }
 
 /**
@@ -72,20 +82,47 @@ export function parseLessonName(fileName: string): { order: number; title: strin
 }
 
 /**
- * 构建课程URL
+ * 从文件名提取小节序号和标题
+ * 例如: "01-linux.md" => { order: 1, title: "Linux" }
  */
-export function buildLessonUrl(chapter: string, lesson: string): string {
+export function parseSubsectionName(fileName: string): { order: number; title: string } {
+  const nameWithoutExt = fileName.replace(/\.(md|mdx)$/, '');
+  const match = nameWithoutExt.match(/^(\d+)-(.+)$/);
+  if (!match) {
+    return { order: 0, title: nameWithoutExt };
+  }
+  const [, orderStr, titleSlug] = match;
+  const title = titleSlug
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+  return {
+    order: parseInt(orderStr, 10),
+    title,
+  };
+}
+
+/**
+ * 构建课程URL
+ * 支持2级和3级结构
+ */
+export function buildLessonUrl(chapter: string, lesson: string, subsection?: string): string {
+  if (subsection) {
+    return `/courses/${chapter}/${lesson}/${subsection}`;
+  }
   return `/courses/${chapter}/${lesson}`;
 }
 
 /**
- * 按章节分组课程列表
+ * 按章节分组课程列表，支持3级结构
+ * 自动识别是否有小节（通过slug的层级判断）
  */
-export function groupByChapter(lessons: CourseMetadata[]): Chapter[] {
+export function groupByChapter(allCourses: CourseMetadata[]): Chapter[] {
   const chapters = new Map<string, Chapter>();
 
-  for (const lesson of lessons) {
-    const { chapter, chapterTitle } = lesson;
+  // 第一步：按章节分组
+  for (const course of allCourses) {
+    const { chapter, chapterTitle } = course;
 
     if (!chapters.has(chapter)) {
       const { order } = parseChapterName(chapter);
@@ -96,24 +133,56 @@ export function groupByChapter(lessons: CourseMetadata[]): Chapter[] {
         lessons: [],
       });
     }
-
-    chapters.get(chapter)!.lessons.push(lesson);
   }
 
-  // 按章节序号排序
+  // 第二步：按课程和小节分组
+  for (const course of allCourses) {
+    const { chapter, lesson, subsection } = course;
+    const chapterObj = chapters.get(chapter)!;
+
+    // 查找或创建课程
+    let lessonObj = chapterObj.lessons.find(l => l.id === lesson);
+    if (!lessonObj) {
+      const { order, title } = parseLessonName(lesson);
+      lessonObj = {
+        id: lesson,
+        title,
+        order,
+        subsections: [],
+      };
+      chapterObj.lessons.push(lessonObj);
+    }
+
+    // 如果有小节，添加到小节列表
+    if (subsection) {
+      const { order, title } = parseSubsectionName(subsection);
+      lessonObj.subsections.push({
+        id: subsection,
+        title,
+        order,
+        metadata: course,
+      });
+    } else {
+      // 如果没有小节，直接关联元数据
+      lessonObj.metadata = course;
+    }
+  }
+
+  // 第三步：排序
   const sortedChapters = Array.from(chapters.values()).sort((a, b) => {
     const orderA = parseChapterName(a.id).order;
     const orderB = parseChapterName(b.id).order;
     return orderA - orderB;
   });
 
-  // 每个章节内的课程也排序
+  // 每个章节内的课程排序
   for (const chapter of sortedChapters) {
-    chapter.lessons.sort((a, b) => {
-      const orderA = parseLessonName(a.lesson).order;
-      const orderB = parseLessonName(b.lesson).order;
-      return orderA - orderB;
-    });
+    chapter.lessons.sort((a, b) => a.order - b.order);
+
+    // 每个课程内的小节排序
+    for (const lesson of chapter.lessons) {
+      lesson.subsections.sort((a, b) => a.order - b.order);
+    }
   }
 
   return sortedChapters;
@@ -121,6 +190,7 @@ export function groupByChapter(lessons: CourseMetadata[]): Chapter[] {
 
 /**
  * 查找给定课程的上一课和下一课
+ * 支持3级结构（小节导航）
  */
 export function findAdjacentLessons(
   currentSlug: string,
@@ -129,8 +199,19 @@ export function findAdjacentLessons(
   const chapters = groupByChapter(allLessons);
   const flatLessons: CourseMetadata[] = [];
 
+  // 扁平化所有课程和小节
   for (const chapter of chapters) {
-    flatLessons.push(...chapter.lessons);
+    for (const lesson of chapter.lessons) {
+      if (lesson.subsections.length > 0) {
+        // 有小节，添加所有小节
+        for (const subsection of lesson.subsections) {
+          flatLessons.push(subsection.metadata);
+        }
+      } else if (lesson.metadata) {
+        // 没有小节，直接添加课程
+        flatLessons.push(lesson.metadata);
+      }
+    }
   }
 
   const currentIndex = flatLessons.findIndex(lesson => lesson.slug === currentSlug);
