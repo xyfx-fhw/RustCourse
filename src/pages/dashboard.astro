@@ -11,16 +11,22 @@ const base = import.meta.env.BASE_URL;
 // 获取所有课程
 const allCourses = await getCollection('courses');
 
-// 构建课程元数据，并计算tab信息
+// 构建课程元数据，支持 3 级结构
 const allCoursesMetadata: CourseMetadata[] = allCourses.map((c) => {
-  const [ch, ls] = c.slug.split('/');
+  const slugParts = c.slug.split('/');
+  const ch = slugParts[0];
+  const ls = slugParts[1];
+  const ss = slugParts.length === 3 ? slugParts[2] : undefined;
+
   const chInfo = parseChapterName(ch);
+
   return {
     ...c.data,
     slug: c.slug,
     chapter: ch,
     chapterTitle: chInfo.title,
     lesson: ls,
+    subsection: ss,
     url: `${base}/courses/${c.slug}`,
   };
 });
@@ -36,7 +42,18 @@ for (const course of allCourses) {
 }
 
 const chapters = groupByChapter(allCoursesMetadata);
-const totalLessons = allCoursesMetadata.length;
+
+// 计算总课程数（扁平化所有课程和小节）
+let totalLessons = 0;
+for (const chapter of chapters) {
+  for (const lesson of chapter.lessons) {
+    if (lesson.subsections.length > 0) {
+      totalLessons += lesson.subsections.length;
+    } else if (lesson.metadata) {
+      totalLessons += 1;
+    }
+  }
+}
 
 // 将courseTabInfo传递给前端
 const courseTabInfoJson = JSON.stringify(courseTabInfo);
@@ -102,7 +119,11 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
                   <h3 class="text-xl font-bold text-gray-900 mb-2">
                     第 {index + 1} 章：{chapter.title}
                   </h3>
-                  <p class="text-gray-600">共 {chapter.lessons.length} 节课</p>
+                  <p class="text-gray-600">
+                    共 {chapter.lessons.reduce((sum, lesson) => {
+                      return sum + (lesson.subsections.length > 0 ? lesson.subsections.length : 1);
+                    }, 0)} 节课
+                  </p>
                 </div>
                 <span class="text-3xl">📖</span>
               </div>
@@ -120,43 +141,132 @@ const courseTabInfoJson = JSON.stringify(courseTabInfo);
 
               <!-- 课程列表 -->
               <ul class="space-y-2">
-                {chapter.lessons.map((lesson, lessonIndex) => (
-                  <li>
-                    <div class="flex items-center gap-2">
-                      <a
-                        href={lesson.url}
-                        class="flex-1 block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                        data-lesson-slug={lesson.slug}
-                      >
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center space-x-3">
-                            <span class="lesson-status-icon text-2xl">⬜</span>
-                            <div>
-                              <div class="text-gray-900 group-hover:text-primary font-medium">
-                                {index + 1}.{lessonIndex + 1} {lesson.title}
-                              </div>
-                              {lesson.duration && (
-                                <div class="text-sm text-gray-500">
-                                  ⏱️ {lesson.duration} 分钟
+                {chapter.lessons.map((lesson, lessonIndex) => {
+                  // 判断是否有小节
+                  if (lesson.subsections.length > 0) {
+                    // 有小节：渲染课程和小节列表
+                    return (
+                      <>
+                        {/* 渲染 index.md（如果存在） */}
+                        {lesson.metadata && (
+                          <li>
+                            <div class="flex items-center gap-2">
+                              <a
+                                href={lesson.metadata.url}
+                                class="flex-1 block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                                data-lesson-slug={lesson.metadata.slug}
+                              >
+                                <div class="flex items-center justify-between">
+                                  <div class="flex items-center space-x-3">
+                                    <span class="lesson-status-icon text-2xl">⬜</span>
+                                    <div>
+                                      <div class="text-gray-900 group-hover:text-primary font-medium">
+                                        {index + 1}.{lessonIndex + 1} {lesson.metadata.title}
+                                      </div>
+                                      {lesson.metadata.duration && (
+                                        <div class="text-sm text-gray-500">
+                                          ⏱️ {lesson.metadata.duration} 分钟
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                  </svg>
                                 </div>
-                              )}
+                              </a>
+                              <button
+                                class="reset-lesson-btn hidden px-3 py-2 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap"
+                                data-lesson-slug={lesson.metadata.slug}
+                                title="清除该课程的学习进度"
+                              >
+                                重新学习
+                              </button>
                             </div>
-                          </div>
-                          <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                          </svg>
+                          </li>
+                        )}
+
+                        {/* 渲染所有小节 */}
+                        {lesson.subsections.map((subsection, subsectionIndex) => (
+                          <li>
+                            <div class="flex items-center gap-2">
+                              <a
+                                href={subsection.metadata.url}
+                                class="flex-1 block p-3 rounded-lg hover:bg-gray-50 transition-colors group ml-4"
+                                data-lesson-slug={subsection.metadata.slug}
+                              >
+                                <div class="flex items-center justify-between">
+                                  <div class="flex items-center space-x-3">
+                                    <span class="lesson-status-icon text-2xl">⬜</span>
+                                    <div>
+                                      <div class="text-gray-900 group-hover:text-primary font-medium">
+                                        {index + 1}.{lessonIndex + 1}.{subsectionIndex + 1} {subsection.metadata.title}
+                                      </div>
+                                      {subsection.metadata.duration && (
+                                        <div class="text-sm text-gray-500">
+                                          ⏱️ {subsection.metadata.duration} 分钟
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
+                              </a>
+                              <button
+                                class="reset-lesson-btn hidden px-3 py-2 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap"
+                                data-lesson-slug={subsection.metadata.slug}
+                                title="清除该课程的学习进度"
+                              >
+                                重新学习
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </>
+                    );
+                  } else {
+                    // 没有小节：直接渲染课程链接
+                    return (
+                      <li>
+                        <div class="flex items-center gap-2">
+                          <a
+                            href={lesson.metadata?.url}
+                            class="flex-1 block p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                            data-lesson-slug={lesson.metadata?.slug}
+                          >
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center space-x-3">
+                                <span class="lesson-status-icon text-2xl">⬜</span>
+                                <div>
+                                  <div class="text-gray-900 group-hover:text-primary font-medium">
+                                    {index + 1}.{lessonIndex + 1} {lesson.metadata?.title || lesson.title}
+                                  </div>
+                                  {lesson.metadata?.duration && (
+                                    <div class="text-sm text-gray-500">
+                                      ⏱️ {lesson.metadata.duration} 分钟
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
+                          </a>
+                          <button
+                            class="reset-lesson-btn hidden px-3 py-2 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap"
+                            data-lesson-slug={lesson.metadata?.slug}
+                            title="清除该课程的学习进度"
+                          >
+                            重新学习
+                          </button>
                         </div>
-                      </a>
-                      <button
-                        class="reset-lesson-btn hidden px-3 py-2 text-xs bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors whitespace-nowrap"
-                        data-lesson-slug={lesson.slug}
-                        title="清除该课程的学习进度"
-                      >
-                        重新学习
-                      </button>
-                    </div>
-                  </li>
-                ))}
+                      </li>
+                    );
+                  }
+                })}
               </ul>
             </div>
           ))}
