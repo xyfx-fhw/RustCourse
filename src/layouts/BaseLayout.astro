@@ -8,6 +8,7 @@ interface Props {
 
 const { title = 'Rust 互动教程', description = '从零开始学习 Rust 编程语言' } = Astro.props;
 const fullTitle = title === 'Rust 互动教程' ? title : `${title} - Rust 互动教程`;
+const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
 ---
 
 <!doctype html>
@@ -16,7 +17,9 @@ const fullTitle = title === 'Rust 互动教程' ? title : `${title} - Rust 互�
     <meta charset="UTF-8" />
     <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="icon" type="image/x-icon" href={`${base}favicon.ico`} />
+    <link rel="apple-touch-icon" href={`${base}favicon.svg`} />
     <meta name="generator" content={Astro.generator} />
     <title>{fullTitle}</title>
   </head>

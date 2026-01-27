@@ -1,9 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 128 128">
-    <path d="M50.4 78.5a75.1 75.1 0 0 0-28.5 6.9l24.2-65.7c.7-2 1.9-3.2 3.4-3.2h29c1.5 0 2.7 1.2 3.4 3.2l24.2 65.7s-11.6-7-28.5-7L67 45.5c-.4-1.7-1.6-2.8-2.9-2.8-1.3 0-2.5 1.1-2.9 2.7L50.4 78.5Zm-1.1 28.2Zm-4.2-20.2c-2 6.6-.6 15.8 4.2 20.2a17.5 17.5 0 0 1 .2-.7 5.5 5.5 0 0 1 5.7-4.5c2.8.1 4.3 1.5 4.7 4.7.2 1.1.2 2.3.2 3.5v.4c0 2.7.7 5.2 2.2 7.4a13 13 0 0 0 5.7 4.9v-.3l-.2-.3c-1.8-5.6-.5-9.5 4.4-12.8l1.5-1a73 73 0 0 0 3.2-2.2 16 16 0 0 0 6.8-11.4c.3-2 .1-4-.6-6l-.8.6-1.6 1a37 37 0 0 1-22.4 2.7c-5-.7-9.7-2-13.2-6.2Z" />
-    <style>
-        path { fill: #000; }
-        @media (prefers-color-scheme: dark) {
-            path { fill: #FFF; }
-        }
-    </style>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+    <!-- Rust Logo - Simplified Crab -->
+    <defs>
+        <style>
+            .rust-orange { fill: #CE422B; }
+            .rust-dark { fill: #8B2E1F; }
+            @media (prefers-color-scheme: dark) {
+                .rust-orange { fill: #F74C00; }
+                .rust-dark { fill: #CE422B; }
+            }
+        </style>
+    </defs>
+
+    <!-- Crab body -->
+    <circle class="rust-orange" cx="64" cy="64" r="50"/>
+
+    <!-- Left claw -->
+    <path class="rust-dark" d="M 20,50 Q 15,45 12,42 Q 10,40 8,42 Q 6,44 8,46 Q 12,50 15,52 L 25,58"/>
+
+    <!-- Right claw -->
+    <path class="rust-dark" d="M 108,50 Q 113,45 116,42 Q 118,40 120,42 Q 122,44 120,46 Q 116,50 113,52 L 103,58"/>
+
+    <!-- Left eye -->
+    <circle fill="#FFF" cx="48" cy="58" r="8"/>
+    <circle fill="#000" cx="50" cy="58" r="4"/>
+
+    <!-- Right eye -->
+    <circle fill="#FFF" cx="80" cy="58" r="8"/>
+    <circle fill="#000" cx="78" cy="58" r="4"/>
+
+    <!-- Smile -->
+    <path class="rust-dark" d="M 48,75 Q 64,85 80,75" stroke="#8B2E1F" stroke-width="3" fill="none"/>
+
+    <!-- Legs -->
+    <rect class="rust-dark" x="35" y="85" width="4" height="15" rx="2"/>
+    <rect class="rust-dark" x="52" y="85" width="4" height="15" rx="2"/>
+    <rect class="rust-dark" x="72" y="85" width="4" height="15" rx="2"/>
+    <rect class="rust-dark" x="89" y="85" width="4" height="15" rx="2"/>
 </svg>

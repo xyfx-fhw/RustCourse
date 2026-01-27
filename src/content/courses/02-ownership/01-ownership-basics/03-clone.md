@@ -6,7 +6,7 @@ difficulty: "intermediate"
 tags: ["所有权", "克隆", "Copy"]
 ---
 
-# 克隆数据
+# 速览
 
 有时候我们确实需要复制堆上的数据，而不仅仅是栈上的元数据。这时候就需要使用**克隆**（Clone）。
 
@@ -32,9 +32,9 @@ s2 ────────→  ┌─────────┐
               └─────────┘
 ```
 
-## clone() vs 移动
+# clone() vs 移动
 
-### 移动（默认行为）
+## 移动（默认行为）
 
 ```rust
 let s1 = String::from("hello");
@@ -47,7 +47,7 @@ let s2 = s1;  // 移动：只复制指针
 - ✅ 无额外内存分配
 - ❌ 原变量失效
 
-### 克隆（显式调用）
+## 克隆（显式调用）
 
 ```rust
 let s1 = String::from("hello");
@@ -60,11 +60,11 @@ let s2 = s1.clone();  // 克隆：复制所有数据
 - ❌ 较慢（需要分配新内存并复制数据）
 - ❌ 增加内存使用
 
-## 何时使用 clone()？
+# 何时使用 clone()
 
-### ✅ 适合使用的场景
+## ✅ 适合使用的场景
 
-1. **需要保留原始数据**
+### 1. 需要保留原始数据
 
 ```rust
 fn main() {
@@ -79,7 +79,7 @@ fn process_data(s: String) {
 }
 ```
 
-2. **需要多个副本**
+### 2. 需要多个副本
 
 ```rust
 let template = String::from("Hello, {}!");
@@ -90,7 +90,7 @@ let greeting3 = template.clone();
 // 所有变量都有效
 ```
 
-3. **跨线程共享数据**
+### 3. 跨线程共享数据
 
 ```rust
 use std::thread;
@@ -105,9 +105,9 @@ thread::spawn(move || {
 println!("{}", data);  // 原始数据仍然有效
 ```
 
-### ❌ 不适合使用的场景
+## ❌ 不适合使用的场景
 
-1. **性能敏感的代码**
+### 1. 性能敏感的代码
 
 ```rust
 // ❌ 不好：频繁克隆大型数据
@@ -122,7 +122,7 @@ for i in 0..1000000 {
 }
 ```
 
-2. **可以使用引用的地方**
+### 2. 可以使用引用的地方
 
 ```rust
 // ❌ 不好
@@ -139,9 +139,9 @@ fn print_string(s: &String) {
 print_string(&s);  // 只是借用
 ```
 
-## Copy vs Clone
+# Copy vs Clone
 
-### Copy trait（隐式复制）
+## Copy trait（隐式复制）
 
 ```rust
 let x = 5;
@@ -156,7 +156,7 @@ println!("{} {}", x, y);  // 都有效
 - 自动执行，无需显式调用
 - 类型：`i32`, `f64`, `bool`, `char` 等
 
-### Clone trait（显式复制）
+## Clone trait（显式复制）
 
 ```rust
 let s1 = String::from("hello");
@@ -204,7 +204,9 @@ impl Clone for MyStruct {
 }
 ```
 
-## clone() 的性能考虑
+# 性能考虑
+
+## clone() 的性能开销
 
 ### 测量克隆的开销
 
@@ -219,21 +221,24 @@ let s1 = small_string.clone();  // 几纳秒
 let s2 = large_string.clone();  // 几毫秒
 ```
 
-### 优化建议
+## 优化建议
 
-1. **优先使用引用**
+### 1. 优先使用引用
+
 ```rust
 fn process(s: &String) { }  // ✅ 无开销
 ```
 
-2. **仅在必要时克隆**
+### 2. 仅在必要时克隆
+
 ```rust
 if really_need_ownership {
     let s = data.clone();  // 仅在必要时
 }
 ```
 
-3. **考虑使用 Rc 或 Arc**（后续章节）
+### 3. 考虑使用 Rc 或 Arc
+
 ```rust
 use std::rc::Rc;
 
@@ -263,7 +268,9 @@ map1.insert("key", "value");
 let map2 = map1.clone();  // 克隆整个哈希表
 ```
 
-## 要点总结
+# 要点总结
+
+## 核心概念
 
 - ✅ `clone()` 执行深拷贝，包括堆数据
 - ✅ 原变量和克隆都有效

@@ -6,7 +6,7 @@ difficulty: "intermediate"
 tags: ["切片", "引用", "字符串"]
 ---
 
-# 切片类型
+# 速览
 
 切片（slice）是对集合中连续序列的引用。切片让你可以引用集合的一部分而不是整个集合。
 
@@ -52,6 +52,8 @@ let s = String::from("hello");
 let slice1 = &s[1..3];   // "el"
 let slice2 = &s[1..=3];  // "ell" - 包括结束索引
 ```
+
+# 字符串切片详解
 
 ## 字符串字面量就是切片
 
@@ -128,7 +130,9 @@ String s 在栈上：
      └─→ 指向堆上的 "h"
 ```
 
-## 切片的安全性
+# 切片的安全性
+
+## 防止悬垂引用
 
 切片防止悬垂引用：
 
@@ -145,6 +149,31 @@ fn main() {
 ```
 
 **编译错误**：不能在有不可变借用时进行可变借用！
+
+## String vs &str
+
+理解这两种类型的区别很重要：
+
+| 特性 | `String` | `&str` |
+|------|----------|--------|
+| 所有权 | 拥有数据 | 借用数据 |
+| 可变性 | 可变 | 通常不可变 |
+| 内存位置 | 堆 | 栈/堆/静态 |
+| 大小 | 动态 | 固定 |
+
+### 转换
+
+```rust
+// String → &str
+let s = String::from("hello");
+let slice: &str = &s;  // 或 &s[..]
+
+// &str → String
+let s = "hello";
+let string: String = s.to_string();  // 或 String::from(s)
+```
+
+# 数组和 Vec 切片
 
 ## 数组切片
 
@@ -216,36 +245,13 @@ for &item in slice.iter() {
 }
 
 // 查找
-println!("{:?}", slice.first());  // Some(1)
-println!("{:?}", slice.last());   // Some(5)
+println!("{:?}", slice.first());  // Some(&1)
+println!("{:?}", slice.last());   // Some(&5)
 ```
 
-## String vs &str
+# 实际应用
 
-理解这两种类型的区别很重要：
-
-| 特性 | `String` | `&str` |
-|------|----------|--------|
-| 所有权 | 拥有数据 | 借用数据 |
-| 可变性 | 可变 | 通常不可变 |
-| 内存位置 | 堆 | 栈/堆/静态 |
-| 大小 | 动态 | 固定 |
-
-### 转换
-
-```rust
-// String → &str
-let s = String::from("hello");
-let slice: &str = &s;  // 或 &s[..]
-
-// &str → String
-let s = "hello";
-let string: String = s.to_string();  // 或 String::from(s)
-```
-
-## 实际应用示例
-
-### 提取文件扩展名
+## 提取文件扩展名
 
 ```rust
 fn get_extension(filename: &str) -> Option<&str> {
@@ -258,7 +264,7 @@ if let Some(ext) = get_extension(filename) {
 }
 ```
 
-### 解析命令
+## 解析命令
 
 ```rust
 fn parse_command(input: &str) -> (&str, &str) {
@@ -297,7 +303,9 @@ let hello: String = chars[0..2].iter().collect();
 println!("{}", hello);  // "你好"
 ```
 
-## 要点总结
+# 要点总结
+
+## 核心概念
 
 - ✅ 切片是对集合部分的引用
 - ✅ 字符串切片：`&str`，数组切片：`&[T]`

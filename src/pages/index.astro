@@ -66,8 +66,11 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
         <h1 class="text-5xl md:text-6xl font-bold mb-6">
           🦀 Rust 互动教程
         </h1>
-        <p class="text-xl md:text-2xl mb-8 text-blue-100">
+        <p class="text-xl md:text-2xl mb-4 text-blue-100">
           从零开始，系统学习 Rust 编程语言
+        </p>
+        <p class="text-sm md:text-base mb-8 text-blue-200">
+          📖 基于 Rust 官方文档编写，结合实践经验和教学方法
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
           <a
@@ -109,6 +112,200 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
             <h3 class="text-xl font-bold mb-2">进度跟踪</h3>
             <p class="text-gray-600">自动记录学习进度，随时查看</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 重要资源链接 -->
+    <section class="py-12 bg-gradient-to-r from-gray-50 to-blue-50 border-y border-gray-200">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold text-center mb-8 text-gray-900">
+          📚 重要学习资源
+        </h2>
+        <div class="max-w-5xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+          <!-- Rust 官方文档 -->
+          <a
+            href="https://doc.rust-lang.org/book/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">📖</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  Rust 官方文档
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  The Rust Programming Language Book
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- Rust by Example -->
+          <a
+            href="https://doc.rust-lang.org/rust-by-example/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">💻</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  Rust by Example
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  通过实例学习 Rust
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- Rustonomicon -->
+          <a
+            href="https://doc.rust-lang.org/nomicon/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">🔥</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  Rustonomicon
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  Unsafe Rust 高级指南
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- 嵌入式 Rust -->
+          <a
+            href="https://docs.rust-embedded.org/book/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">🔌</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  嵌入式 Rust
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  Embedded Rust Book
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- Async Book -->
+          <a
+            href="https://rust-lang.github.io/async-book/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">⚡</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  Async Rust
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  异步编程实用指南
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- Cargo Book -->
+          <a
+            href="https://doc.rust-lang.org/cargo/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">📦</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  Cargo Book
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  Rust 包管理器文档
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- Rust Edition Guide -->
+          <a
+            href="https://doc.rust-lang.org/edition-guide/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">🆕</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  Rust Edition Guide
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  版本特性与迁移指南
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
+
+          <!-- Standard Library Docs -->
+          <a
+            href="https://doc.rust-lang.org/std/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group bg-white rounded-lg p-5 shadow-sm hover:shadow-lg transition-all hover:scale-105 border border-gray-200"
+          >
+            <div class="flex items-start gap-3">
+              <span class="text-3xl flex-shrink-0">📚</span>
+              <div class="flex-1 min-w-0">
+                <h3 class="font-semibold text-gray-900 group-hover:text-primary mb-1.5 text-base leading-tight">
+                  标准库文档
+                </h3>
+                <p class="text-sm text-gray-600 leading-snug">
+                  Rust 标准库 API 参考
+                </p>
+              </div>
+              <svg class="w-4 h-4 text-gray-400 group-hover:text-primary flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </div>
+          </a>
         </div>
       </div>
     </section>
