@@ -144,7 +144,7 @@ if (chapters.length > 0 && chapters[0].lessons.length > 0) {
                       <li class="border-l-2 border-gray-200 pl-4 space-y-2">
                         {lesson.metadata ? (
                           <a href={lesson.metadata.url} class="flex items-center font-medium text-gray-700 hover:text-primary mb-2">
-                            <span>{index + 1}.{lessonIndex + 1} {lesson.title}</span>
+                            <span>{index + 1}.{lessonIndex + 1} {lesson.metadata.title}</span>
                           </a>
                         ) : (
                           <div class="flex items-center font-medium text-gray-700 mb-2">

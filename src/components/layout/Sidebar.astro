@@ -18,6 +18,8 @@ const { chapters, currentSlug } = Astro.props;
         // 判断章节是否有活动的课程或小节
         const hasActiveItem = chapter.lessons.some(lesson => {
           if (lesson.subsections.length > 0) {
+            // 检查是否在 index 页面或任何小节页面
+            if (lesson.metadata?.slug === currentSlug) return true;
             return lesson.subsections.some(sub => sub.metadata.slug === currentSlug);
           }
           return lesson.metadata?.slug === currentSlug;
@@ -44,7 +46,7 @@ const { chapters, currentSlug } = Astro.props;
 
                 if (hasSubsections) {
                   // 有小节：渲染可折叠的课程和小节列表
-                  const hasActiveSubsection = lesson.subsections.some(sub => sub.metadata.slug === currentSlug);
+                  const hasActiveSubsection = lesson.metadata?.slug === currentSlug || lesson.subsections.some(sub => sub.metadata.slug === currentSlug);
                   const isIndexActive = currentSlug === lesson.metadata?.slug;
 
                   return (
