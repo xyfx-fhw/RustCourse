@@ -6,7 +6,7 @@ import mdx from '@astrojs/mdx';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://fuhaowen.github.io',
+  site: 'https://xyfx-fhw.github.io',
   base: '/RustCourse',
   integrations: [
     react(),
