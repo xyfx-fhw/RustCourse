@@ -46,12 +46,13 @@ for (const chapter of chapters) {
 let firstLessonUrl = `${base}/courses/01-rust-basics/01-installation`;
 if (chapters.length > 0 && chapters[0].lessons.length > 0) {
   const firstLesson = chapters[0].lessons[0];
-  if (firstLesson.subsections.length > 0) {
-    // 如果第一个课程有小节，使用第一个小节
-    firstLessonUrl = firstLesson.subsections[0].metadata.url;
-  } else if (firstLesson.metadata) {
-    // 否则使用课程本身
+
+  // 优先使用课程的概览页（index.md）
+  if (firstLesson.metadata) {
     firstLessonUrl = firstLesson.metadata.url;
+  } else if (firstLesson.subsections.length > 0) {
+    // 如果没有 index.md，才使用第一个小节
+    firstLessonUrl = firstLesson.subsections[0].metadata.url;
   }
 }
 ---
