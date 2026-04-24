@@ -1,0 +1,27 @@
+[
+  {
+    "type": "multiple-choice",
+    "question": "Rust 中 println! 末尾有感叹号，这说明它是什么？",
+    "options": ["一个函数", "一个宏", "一个关键字", "一个运算符"],
+    "answer": 1,
+    "explanation": "Rust 中名称末尾带 ! 的调用是宏（macro），而不是普通函数。宏在编译期展开，可以接受可变数量的参数，println! 就是标准库提供的格式化输出宏。"
+  },
+  {
+    "type": "multiple-choice",
+    "question": "下面哪种方式可以声明一个可变变量？",
+    "options": ["let x = 5;", "var x = 5;", "let mut x = 5;", "mutable x = 5;"],
+    "answer": 2,
+    "explanation": "Rust 变量默认不可变，需要使用 let mut 关键字才能声明可变变量。其他语言中的 var 关键字在 Rust 中不存在。"
+  },
+  {
+    "type": "multiple-choice",
+    "question": "以下程序的输出是什么？\n\nfn main() {\n    let x = 5;\n    let x = x + 1;\n    println!(\"{}\", x);\n}",
+    "options": ["5", "6", "编译错误：x 已被声明", "运行时错误"],
+    "answer": 1,
+    "explanation": "这利用了 Rust 的「变量遮蔽」（shadowing）特性：第二个 let x 创建了一个新变量并遮蔽了旧的 x，值为 5 + 1 = 6。遮蔽与 let mut 不同，它实际上是创建了新变量。"
+  },
+  {
+    "type": "coding",
+    "exerciseId": "fix-mutability"
+  }
+]

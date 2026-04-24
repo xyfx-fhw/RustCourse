@@ -15,6 +15,8 @@ interface Props {
   breadcrumb: BreadcrumbItem[];
   prevArticle?: NavArticle;
   nextArticle?: NavArticle;
+  exerciseHref?: string;
+  quizHref?: string;
 }
 
 const {
@@ -26,6 +28,8 @@ const {
   breadcrumb,
   prevArticle,
   nextArticle,
+  exerciseHref,
+  quizHref,
 } = Astro.props;
 ---
 
@@ -48,6 +52,23 @@ const {
       <main class="chapter-main">
         <slot />
       </main>
+
+      {(exerciseHref || quizHref) && (
+        <div class="chapter-actions">
+          {exerciseHref && (
+            <a href={exerciseHref} class="chapter-action-btn">
+              <span class="action-icon">✏️</span>
+              <span>进入练习</span>
+            </a>
+          )}
+          {quizHref && (
+            <a href={quizHref} class="chapter-action-btn">
+              <span class="action-icon">📝</span>
+              <span>进入测验</span>
+            </a>
+          )}
+        </div>
+      )}
 
       {(prevArticle || nextArticle) && (
       <nav class="article-nav" aria-label="文章导航">
@@ -120,6 +141,37 @@ const {
   .breadcrumb-current {
     color: var(--color-text);
   }
+
+  /* 章节练习/测验入口按钮组 */
+  .chapter-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin: 3rem -2rem 0;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .chapter-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9375rem;
+    color: var(--color-text);
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .chapter-action-btn:hover {
+    border-color: var(--color-accent);
+    background: rgba(206, 65, 43, 0.06);
+    text-decoration: none;
+  }
+
+  .action-icon { font-size: 1rem; }
 
   /* 上一节/下一节导航 */
   .article-nav {

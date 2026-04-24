@@ -34,6 +34,16 @@ const breadcrumb: BreadcrumbItem[] = [
     : []),
   { label: entry.data.title },
 ];
+
+// 从文章 slug 推导出章节名（如 '01-getting-started/01-installation' → 'getting-started'）
+const chapterDir = entry.slug.split('/')[0] ?? '';
+const chapterName = chapterDir.replace(/^\d+-/, '');
+
+// 仅在章节首页显示练习/测验入口按钮
+const exerciseEntries = isChapterIndex ? await getCollection('exercises') : [];
+const quizEntries = isChapterIndex ? await getCollection('quizzes') : [];
+const exerciseHref = exerciseEntries.some(e => e.id === chapterName) ? `/exercises/${chapterName}` : undefined;
+const quizHref = quizEntries.some(e => e.id === chapterName) ? `/quiz/${chapterName}` : undefined;
 ---
 
 <ChapterLayout
@@ -45,6 +55,8 @@ const breadcrumb: BreadcrumbItem[] = [
   breadcrumb={breadcrumb}
   prevArticle={prevArticle}
   nextArticle={nextArticle}
+  exerciseHref={exerciseHref}
+  quizHref={quizHref}
 >
   <script>
     localStorage.setItem('rust-tutorial-last-visited', window.location.pathname);

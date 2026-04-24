@@ -1,0 +1,25 @@
+[
+  {
+    "id": "fix-move",
+    "title": "修复所有权移动错误",
+    "description": "下面的代码在 s1 被移动给 s2 后仍然使用 s1，导致编译错误。请修复这个问题，使两个变量都可以使用。",
+    "starterCode": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = s1;\n    println!(\"{} {}\", s1, s2);\n}",
+    "tests": [
+      { "type": "compiles", "description": "代码可以成功编译" },
+      { "type": "stdout", "expected": "hello hello", "description": "输出 hello hello" }
+    ],
+    "hint": "使用 .clone() 方法深拷贝字符串，这样 s1 的所有权不会被转移。",
+    "solution": "fn main() {\n    let s1 = String::from(\"hello\");\n    let s2 = s1.clone();\n    println!(\"{} {}\", s1, s2);\n}"
+  },
+  {
+    "id": "fix-borrow",
+    "title": "修复借用冲突",
+    "description": "下面的代码同时存在不可变引用 r1 和可变引用 r2，违反了借用规则。请修复代码使其通过编译。",
+    "starterCode": "fn main() {\n    let mut s = String::from(\"hello\");\n    let r1 = &s;\n    let r2 = &mut s;\n    println!(\"{} {}\", r1, r2);\n}",
+    "tests": [
+      { "type": "compiles", "description": "代码可以成功编译" }
+    ],
+    "hint": "先在单独的 println! 中使用完 r1，然后再创建可变引用 r2。两者的生命周期就不会重叠。",
+    "solution": "fn main() {\n    let mut s = String::from(\"hello\");\n    let r1 = &s;\n    println!(\"{}\", r1);\n    let r2 = &mut s;\n    println!(\"{}\", r2);\n}"
+  }
+]
