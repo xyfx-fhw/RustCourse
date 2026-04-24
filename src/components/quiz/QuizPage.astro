@@ -23,7 +23,7 @@ interface Exercise {
   title: string;
   description: string;
   starterCode: string;
-  tests: Array<{ type: string; description: string; expected?: string }>;
+  tests: Array<{ type: 'compiles' | 'stdout'; description: string; expected?: string }>;
   hint?: string;
   solution?: string;
 }
@@ -60,13 +60,13 @@ const totalMC = questions.filter(q => q.type === 'multiple-choice').length;
 
   <!-- 得分汇总：初始隐藏，所有选择题回答完后显示 -->
   {totalMC > 0 && (
-    <div class="quiz-result" id="quiz-result" hidden>
+    <div class="quiz-result" hidden>
       <div class="quiz-score">
-        <span class="quiz-score-num" id="quiz-score-num">0</span>
+        <span class="quiz-score-num">0</span>
         <span class="quiz-score-sep">/</span>
         <span class="quiz-score-total">{totalMC}</span>
       </div>
-      <p class="quiz-score-label" id="quiz-score-label">道选择题答对</p>
+      <p class="quiz-score-label">道选择题答对</p>
     </div>
   )}
 </div>
@@ -78,21 +78,23 @@ const totalMC = questions.filter(q => q.type === 'multiple-choice').length;
   if (quizEl) {
     const slug = quizEl.dataset.slug ?? '';
     const totalMC = parseInt(quizEl.dataset.totalMc ?? '0');
-    const resultEl = document.getElementById('quiz-result');
-    const scoreNumEl = document.getElementById('quiz-score-num');
-    const scoreLabelEl = document.getElementById('quiz-score-label');
+    // 用相对查询，避免多实例时 getElementById 命中错误的元素
+    const resultEl   = quizEl.querySelector<HTMLElement>('.quiz-result');
+    const scoreNumEl = quizEl.querySelector<HTMLElement>('.quiz-score-num');
+    const scoreLabelEl = quizEl.querySelector<HTMLElement>('.quiz-score-label');
 
-    let answeredCount = 0;
+    const answeredIndices = new Set<number>();
     let correctCount = 0;
 
-    // 监听每道选择题的答题事件
-    window.addEventListener('quiz-answer', (e) => {
-      const { correct } = (e as CustomEvent<{ idx: number; correct: boolean }>).detail;
-      answeredCount++;
+    // 监听从 .mc-block 冒泡到本元素的答题事件（不再用全局 window 监听）
+    quizEl.addEventListener('quiz-answer', (e) => {
+      const { idx, correct } = (e as CustomEvent<{ idx: number; correct: boolean }>).detail;
+      if (answeredIndices.has(idx)) return; // 幂等：同一题多次触发只统计一次
+      answeredIndices.add(idx);
       if (correct) correctCount++;
 
       // 所有选择题回答完毕时显示汇总
-      if (answeredCount === totalMC && resultEl) {
+      if (answeredIndices.size === totalMC && resultEl) {
         resultEl.hidden = false;
         if (scoreNumEl) scoreNumEl.textContent = String(correctCount);
         const pct = Math.round((correctCount / totalMC) * 100);

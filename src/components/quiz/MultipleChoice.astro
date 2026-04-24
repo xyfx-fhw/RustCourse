@@ -18,9 +18,9 @@ const { question, options, answer, explanation, questionIdx } = Astro.props;
     <span class="mc-qnum">{questionIdx + 1}.</span> {question}
   </p>
   <ul class="mc-options">
-    {options.map((opt, i) => (
+    {options.map((opt) => (
       <li>
-        <button class="mc-option" data-opt-idx={i} type="button">{opt}</button>
+        <button class="mc-option" type="button">{opt}</button>
       </li>
     ))}
   </ul>
@@ -29,11 +29,11 @@ const { question, options, answer, explanation, questionIdx } = Astro.props;
 
 <script>
   // 初始化所有选择题的交互逻辑
-  document.querySelectorAll('.mc-block').forEach(block => {
-    const answer = parseInt((block as HTMLElement).dataset.answer ?? '0');
-    const qIdx = parseInt((block as HTMLElement).dataset.questionIdx ?? '0');
+  document.querySelectorAll<HTMLElement>('.mc-block').forEach(block => {
+    const answer = parseInt(block.dataset.answer ?? '0');
+    const qIdx = parseInt(block.dataset.questionIdx ?? '0');
     const btns = Array.from(block.querySelectorAll<HTMLButtonElement>('.mc-option'));
-    const explanationEl = block.querySelector('.mc-explanation');
+    const explanationEl = block.querySelector<HTMLElement>('.mc-explanation');
     let answered = false;
 
     btns.forEach((btn, i) => {
@@ -41,17 +41,14 @@ const { question, options, answer, explanation, questionIdx } = Astro.props;
         if (answered) return;
         answered = true;
         const correct = i === answer;
-        // 标记当前选项对错
         btn.classList.add(correct ? 'correct' : 'wrong');
-        // 错误时同时高亮正确答案
         if (!correct) btns[answer]?.classList.add('correct');
-        // 禁用所有按钮，防止重复作答
         btns.forEach(b => (b.disabled = true));
-        // 显示解析文字
-        if (explanationEl) (explanationEl as HTMLElement).hidden = false;
-        // 通知父组件得分
-        window.dispatchEvent(
-          new CustomEvent('quiz-answer', { detail: { idx: qIdx, correct } })
+        if (explanationEl) explanationEl.hidden = false;
+        // 派发到最近的 .quiz-page 祖先，避免全局事件总线的多实例干扰
+        const quizPageEl = block.closest('.quiz-page');
+        quizPageEl?.dispatchEvent(
+          new CustomEvent('quiz-answer', { detail: { idx: qIdx, correct }, bubbles: false })
         );
       });
     });

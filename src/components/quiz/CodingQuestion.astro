@@ -9,7 +9,7 @@ interface Exercise {
   title: string;
   description: string;
   starterCode: string;
-  tests: Array<{ type: string; description: string; expected?: string }>;
+  tests: Array<{ type: 'compiles' | 'stdout'; description: string; expected?: string }>;
   hint?: string;
 }
 
@@ -30,7 +30,7 @@ const ex = exercises.find(e => e.id === exerciseId);
       <span class="mc-qnum">{questionIdx + 1}.</span> 编码练习：{ex.title}
     </p>
     <p class="cq-desc">{ex.description}</p>
-    <CodeEditor starterCode={ex.starterCode} tests={ex.tests as any} editorId={`cq-${exerciseId}`} />
+    <CodeEditor starterCode={ex.starterCode} tests={ex.tests} editorId={`cq-${exerciseId}`} />
     {ex.hint && (
       <details class="cq-hint">
         <summary>💡 提示</summary>
