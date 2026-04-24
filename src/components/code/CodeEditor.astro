@@ -1,0 +1,358 @@
+---
+// CodeEditor.astro
+// 可编辑代码组件，集成 Monaco Editor（CDN 加载）
+// 支持运行代码和自动测试验证功能
+
+interface TestCase {
+  type: 'compiles' | 'stdout';
+  description: string;
+  expected?: string; // 仅 stdout 类型需要
+}
+
+interface Props {
+  starterCode: string;           // 初始代码
+  tests?: TestCase[];            // 测试列表（可选）
+  editorId?: string;             // 可选 ID，用于同页多编辑器区分（默认 'code-editor-0'）
+}
+
+const {
+  starterCode,
+  tests = [],
+  editorId = 'code-editor-0',
+} = Astro.props;
+
+// 将 tests 序列化为 JSON 存入 data 属性，避免脚本中硬编码
+const encodedTests = encodeURIComponent(JSON.stringify(tests));
+const encodedCode = encodeURIComponent(starterCode);
+const hasTests = tests.length > 0;
+---
+
+<div
+  class="code-editor"
+  id={editorId}
+  data-starter-code={encodedCode}
+  data-tests={encodedTests}
+>
+  <!-- Monaco Editor 挂载点 -->
+  <div class="ce-editor-container" id={`${editorId}-mount`}></div>
+
+  <!-- 工具栏 -->
+  <div class="ce-toolbar">
+    <span class="code-runner-status" id={`${editorId}-status`}></span>
+    <button class="code-runner-btn" id={`${editorId}-reset`}>重置</button>
+    <button class="code-runner-btn code-runner-run" id={`${editorId}-run`}>▶ 运行</button>
+    {hasTests && (
+      <button class="code-runner-btn" id={`${editorId}-test`}>✓ 测试</button>
+    )}
+  </div>
+
+  <!-- 测试结果列表（仅有 tests 时渲染） -->
+  {hasTests && (
+    <ul class="ce-test-results" id={`${editorId}-results`} hidden>
+      {tests.map((t, i) => (
+        <li class="ce-test-item" data-test-idx={i}>
+          <span class="ce-test-dot">○</span>
+          <span class="ce-test-desc">{t.description}</span>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  <!-- 运行输出区 -->
+  <div class="code-runner-output" id={`${editorId}-output`} hidden></div>
+</div>
+
+<script>
+  import { executeCode } from '../../lib/rust-playground';
+
+  /**
+   * 对字符串进行 HTML 转义，防止 XSS
+   */
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /**
+   * 初始化单个 .code-editor 元素
+   */
+  async function initCodeEditor(el: HTMLElement): Promise<void> {
+    const editorId = el.id;
+    const starterCode = decodeURIComponent(el.dataset.starterCode ?? '');
+    const testsJson = decodeURIComponent(el.dataset.tests ?? '[]');
+
+    // 解析测试列表
+    interface TestCase {
+      type: 'compiles' | 'stdout';
+      description: string;
+      expected?: string;
+    }
+    let tests: TestCase[] = [];
+    try {
+      tests = JSON.parse(testsJson);
+    } catch {
+      // 解析失败则测试列表为空
+    }
+
+    // 获取 DOM 元素
+    const mountEl = el.querySelector<HTMLElement>(`#${editorId}-mount`);
+    const statusEl = el.querySelector<HTMLElement>(`#${editorId}-status`);
+    const resetBtn = el.querySelector<HTMLButtonElement>(`#${editorId}-reset`);
+    const runBtn = el.querySelector<HTMLButtonElement>(`#${editorId}-run`);
+    const testBtn = el.querySelector<HTMLButtonElement>(`#${editorId}-test`);
+    const resultsEl = el.querySelector<HTMLElement>(`#${editorId}-results`);
+    const outputEl = el.querySelector<HTMLElement>(`#${editorId}-output`);
+
+    if (!mountEl || !statusEl || !resetBtn || !runBtn || !outputEl) return;
+
+    // ── 加载 Monaco Editor ────────────────────────────────────────────────
+
+    // 配置 MonacoEnvironment，使用内联 worker 避免 CORS 问题
+    (window as any).MonacoEnvironment = {
+      getWorkerUrl: () =>
+        `data:text/javascript;charset=utf-8,${encodeURIComponent(`
+          self.MonacoEnvironment = { baseUrl: "https://esm.sh/monaco-editor@0.52.0/esm/" };
+          importScripts("https://esm.sh/monaco-editor@0.52.0/esm/vs/base/worker/workerMain.js");
+        `)}`,
+    };
+
+    // 动态 import Monaco（CDN 加载，不需要本地安装）
+    // @ts-expect-error — CDN URL 模块无类型声明，使用 any 处理
+    const monaco = await import('https://esm.sh/monaco-editor@0.52.0/esm/vs/editor/editor.main.js') as any;
+
+    // 创建编辑器实例
+    const editor = monaco.editor.create(mountEl, {
+      value: starterCode,
+      language: 'rust',
+      theme: 'vs-dark',
+      minimap: { enabled: false },
+      fontSize: 14,
+      lineNumbers: 'on',
+      scrollBeyondLastLine: false,
+      automaticLayout: true,
+      padding: { top: 12, bottom: 12 },
+    });
+
+    // ── 工具函数 ──────────────────────────────────────────────────────────
+
+    /** 禁用所有操作按钮 */
+    function disableButtons(): void {
+      runBtn!.disabled = true;
+      resetBtn!.disabled = true;
+      if (testBtn) testBtn.disabled = true;
+    }
+
+    /** 恢复所有操作按钮 */
+    function enableButtons(): void {
+      runBtn!.disabled = false;
+      resetBtn!.disabled = false;
+      if (testBtn) testBtn.disabled = false;
+    }
+
+    /** 清空输出区和测试结果 */
+    function clearOutput(): void {
+      outputEl!.hidden = true;
+      outputEl!.innerHTML = '';
+      if (resultsEl) {
+        resultsEl.hidden = true;
+        // 重置所有测试点状态
+        resultsEl.querySelectorAll<HTMLElement>('.ce-test-dot').forEach((dot) => {
+          dot.textContent = '○';
+          dot.className = 'ce-test-dot';
+        });
+      }
+      statusEl!.textContent = '';
+      statusEl!.className = 'code-runner-status';
+    }
+
+    /** 在输出区显示执行结果 */
+    function showRunResult(result: { success: boolean; stdout: string; stderr: string }): void {
+      outputEl!.hidden = false;
+      if (result.success) {
+        outputEl!.innerHTML = result.stdout
+          ? `<pre class="code-runner-stdout">${escapeHtml(result.stdout)}</pre>`
+          : '<span class="code-runner-stdout">（无输出）</span>';
+      } else {
+        outputEl!.innerHTML = result.stderr
+          ? `<pre class="code-runner-stderr">${escapeHtml(result.stderr)}</pre>`
+          : '<span class="code-runner-stderr">（编译失败，无错误信息）</span>';
+      }
+    }
+
+    // ── 重置按钮逻辑 ──────────────────────────────────────────────────────
+
+    resetBtn.addEventListener('click', () => {
+      editor.setValue(starterCode);
+      clearOutput();
+    });
+
+    // ── 运行按钮逻辑 ──────────────────────────────────────────────────────
+
+    runBtn.addEventListener('click', async () => {
+      disableButtons();
+      runBtn.textContent = '运行中...';
+      statusEl.textContent = '⏳ 执行中...';
+      statusEl.className = 'code-runner-status code-runner-status-running';
+      outputEl.hidden = true;
+
+      try {
+        const result = await executeCode(editor.getValue());
+        statusEl.textContent = '';
+        statusEl.className = 'code-runner-status';
+        showRunResult(result);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        statusEl.textContent = '✗ 请求失败';
+        statusEl.className = 'code-runner-status code-runner-status-error';
+        outputEl.hidden = false;
+        outputEl.innerHTML = `<span class="code-runner-stderr">${escapeHtml(msg)}</span>`;
+      } finally {
+        enableButtons();
+        runBtn.textContent = '▶ 运行';
+      }
+    });
+
+    // ── 测试按钮逻辑（仅有 tests 时绑定） ────────────────────────────────
+
+    if (testBtn && resultsEl && tests.length > 0) {
+      testBtn.addEventListener('click', async () => {
+        disableButtons();
+        testBtn.textContent = '测试中...';
+        statusEl.textContent = '⏳ 测试中...';
+        statusEl.className = 'code-runner-status code-runner-status-running';
+
+        // 显示测试结果列表，重置所有点
+        resultsEl.hidden = false;
+        resultsEl.querySelectorAll<HTMLElement>('.ce-test-dot').forEach((dot) => {
+          dot.textContent = '○';
+          dot.className = 'ce-test-dot';
+        });
+        outputEl.hidden = true;
+        outputEl.innerHTML = '';
+
+        try {
+          // 优化：只执行一次代码，然后对所有测试验证结果
+          // compiles 和 stdout 都只需要一次执行结果
+          const result = await executeCode(editor.getValue());
+
+          let passCount = 0;
+          tests.forEach((test, idx) => {
+            const li = resultsEl.querySelector<HTMLElement>(`[data-test-idx="${idx}"]`);
+            const dot = li?.querySelector<HTMLElement>('.ce-test-dot');
+            if (!dot) return;
+
+            let passed = false;
+            if (test.type === 'compiles') {
+              // 通过条件：编译成功
+              passed = result.success === true;
+            } else if (test.type === 'stdout') {
+              // 通过条件：stdout 完全匹配期望值
+              passed = result.stdout.trim() === (test.expected ?? '').trim();
+            }
+
+            if (passed) {
+              dot.textContent = '✓';
+              dot.className = 'ce-test-dot pass';
+              passCount++;
+            } else {
+              dot.textContent = '✗';
+              dot.className = 'ce-test-dot fail';
+            }
+          });
+
+          // 显示通过数量
+          const total = tests.length;
+          if (passCount === total) {
+            statusEl.textContent = `✓ 全部通过 ${passCount}/${total}`;
+            statusEl.className = 'code-runner-status code-runner-status-ok';
+          } else {
+            statusEl.textContent = `✗ 通过 ${passCount}/${total}`;
+            statusEl.className = 'code-runner-status code-runner-status-error';
+          }
+
+          // 若有编译错误则展示错误信息
+          if (!result.success && result.stderr) {
+            outputEl.hidden = false;
+            outputEl.innerHTML = `<pre class="code-runner-stderr">${escapeHtml(result.stderr)}</pre>`;
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          statusEl.textContent = '✗ 请求失败';
+          statusEl.className = 'code-runner-status code-runner-status-error';
+          outputEl.hidden = false;
+          outputEl.innerHTML = `<span class="code-runner-stderr">${escapeHtml(msg)}</span>`;
+        } finally {
+          enableButtons();
+          testBtn.textContent = '✓ 测试';
+        }
+      });
+    }
+  }
+
+  // ── 页面加载后初始化所有 .code-editor ────────────────────────────────────
+
+  document.querySelectorAll<HTMLElement>('.code-editor').forEach((el) => {
+    initCodeEditor(el).catch((e) => {
+      console.error(`[CodeEditor] 初始化失败 (id=${el.id}):`, e);
+    });
+  });
+</script>
+
+<style>
+  /* ── 编辑器容器 ──────────────────────────────────────────────────────── */
+  .code-editor {
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--color-code-bg);
+    margin-bottom: 1.5rem;
+  }
+
+  /* Monaco Editor 挂载点，默认高度 320px，编辑器自适应填满 */
+  .ce-editor-container {
+    height: 320px;
+  }
+
+  /* ── 工具栏 ──────────────────────────────────────────────────────────── */
+  .ce-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* ── 测试结果列表 ─────────────────────────────────────────────────────── */
+  .ce-test-results {
+    list-style: none;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  /* 单条测试项 */
+  .ce-test-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-family: var(--font-sans);
+  }
+
+  /* 测试状态点 */
+  .ce-test-dot {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+    width: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .ce-test-dot.pass { color: var(--color-success); }
+  .ce-test-dot.fail { color: var(--color-error); }
+</style>
