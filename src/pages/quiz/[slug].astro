@@ -1,0 +1,66 @@
+---
+// quiz/[slug].astro
+// 测验页：从 quizzes collection 读取题目，加载同名 exercises 数据，渲染 QuizPage
+
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../components/layout/BaseLayout.astro';
+import QuizPage from '../../components/quiz/QuizPage.astro';
+
+export async function getStaticPaths() {
+  const quizEntries = await getCollection('quizzes');
+  const exerciseEntries = await getCollection('exercises');
+  return quizEntries.map(quiz => ({
+    params: { slug: quiz.id },
+    props: {
+      quiz,
+      // 同名 exercises（不存在时为空数组）
+      exercises: exerciseEntries.find(e => e.id === quiz.id)?.data ?? [],
+    },
+  }));
+}
+
+const { quiz, exercises } = Astro.props;
+const slug = quiz.id;
+
+function slugToTitle(s: string): string {
+  return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+---
+
+<BaseLayout title={`测验：${slugToTitle(slug)}`}>
+  <div class="quiz-page-wrapper">
+    <div class="quiz-header">
+      <a href="/" class="back-link">← 返回课程</a>
+      <h1 class="quiz-title">测验：{slugToTitle(slug)}</h1>
+    </div>
+
+    <QuizPage questions={quiz.data} exercises={exercises} slug={slug} />
+  </div>
+</BaseLayout>
+
+<style>
+  .quiz-page-wrapper {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 5rem;
+  }
+
+  .quiz-header {
+    margin-bottom: 2.5rem;
+  }
+
+  .back-link {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    transition: color 0.15s;
+  }
+  .back-link:hover { color: var(--color-text); }
+
+  .quiz-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+</style>
