@@ -1,0 +1,181 @@
+---
+// exercises/[slug].astro
+// 练习页：从 exercises content collection 读取练习题，每题渲染一个 CodeEditor
+
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../components/layout/BaseLayout.astro';
+import CodeEditor from '../../components/code/CodeEditor.astro';
+
+// 生成所有静态路径（slug 即文件名）
+export async function getStaticPaths() {
+  const entries = await getCollection('exercises');
+  return entries.map(entry => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const exercises = entry.data; // type='data'，entry.data 直接是练习题数组
+const slug = entry.id;
+
+// 将 slug 转为显示标题：'getting-started' → 'Getting Started'
+function slugToTitle(s: string): string {
+  return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+---
+
+<BaseLayout title={`练习：${slugToTitle(slug)}`}>
+  <div class="exercises-page">
+    <!-- 页头：返回链接 + 标题 -->
+    <div class="exercises-header">
+      <a href="/" class="back-link">← 返回课程</a>
+      <h1 class="exercises-title">练习：{slugToTitle(slug)}</h1>
+    </div>
+
+    <!-- 练习题列表 -->
+    {exercises.map((ex, i) => (
+      <div class="exercise-block" id={ex.id}>
+        <!-- 题号 + 标题 -->
+        <div class="exercise-meta">
+          <span class="exercise-num">{i + 1}</span>
+          <h2 class="exercise-title">{ex.title}</h2>
+        </div>
+
+        <!-- 题目描述 -->
+        <p class="exercise-desc">{ex.description}</p>
+
+        <!-- 代码编辑器 -->
+        <CodeEditor
+          starterCode={ex.starterCode}
+          tests={ex.tests}
+          editorId={ex.id}
+        />
+
+        <!-- 提示折叠（hint 存在时显示） -->
+        {ex.hint && (
+          <details class="exercise-hint">
+            <summary>💡 提示</summary>
+            <p>{ex.hint}</p>
+          </details>
+        )}
+
+        <!-- 答案折叠（solution 存在时显示） -->
+        {ex.solution && (
+          <details class="exercise-solution">
+            <summary>查看答案</summary>
+            <pre class="exercise-solution-code"><code>{ex.solution}</code></pre>
+          </details>
+        )}
+      </div>
+    ))}
+  </div>
+</BaseLayout>
+
+<style>
+  /* ── 页面容器 ──────────────────────────────────────────────────────────── */
+  .exercises-page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 5rem;
+  }
+
+  /* ── 页头 ──────────────────────────────────────────────────────────────── */
+  .exercises-header {
+    margin-bottom: 2.5rem;
+  }
+
+  .back-link {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 0.75rem;
+    transition: color 0.15s;
+  }
+  .back-link:hover { color: var(--color-text); }
+
+  .exercises-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  /* ── 单题块 ────────────────────────────────────────────────────────────── */
+  .exercise-block {
+    margin-bottom: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  /* 最后一题不显示底部分隔线 */
+  .exercise-block:last-child { border-bottom: none; }
+
+  /* 题号 + 标题行 */
+  .exercise-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  /* 圆形题号徽章 */
+  .exercise-num {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--color-accent);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .exercise-title { font-size: 1.125rem; font-weight: 600; }
+
+  /* 题目描述 */
+  .exercise-desc {
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+  }
+
+  /* ── 提示 / 答案折叠块 ─────────────────────────────────────────────────── */
+  .exercise-hint,
+  .exercise-solution {
+    margin-top: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: 0 0.875rem;
+  }
+
+  .exercise-hint summary,
+  .exercise-solution summary {
+    padding: 0.625rem 0;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    user-select: none;
+  }
+
+  .exercise-hint p,
+  .exercise-solution p {
+    padding: 0 0 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  /* 答案代码块 */
+  .exercise-solution-code {
+    margin: 0 0 0.75rem;
+    padding: 0.875rem;
+    background: var(--color-code-bg);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.65;
+  }
+</style>
