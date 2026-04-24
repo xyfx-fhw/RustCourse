@@ -107,6 +107,13 @@ const hasTests = tests.length > 0;
 
     if (!mountEl || !statusEl || !resetBtn || !runBtn || !outputEl) return;
 
+    // 守卫通过后用同名常量覆盖，让 TypeScript 在闭包内追踪到非空类型
+    const mountEl_ = mountEl;
+    const statusEl_ = statusEl;
+    const resetBtn_ = resetBtn;
+    const runBtn_ = runBtn;
+    const outputEl_ = outputEl;
+
     // ── 加载 Monaco Editor ────────────────────────────────────────────────
 
     // 配置 MonacoEnvironment，使用内联 worker 避免 CORS 问题
@@ -119,11 +126,17 @@ const hasTests = tests.length > 0;
     };
 
     // 动态 import Monaco（CDN 加载，不需要本地安装）
-    // @ts-expect-error — CDN URL 模块无类型声明，使用 any 处理
-    const monaco = await import('https://esm.sh/monaco-editor@0.52.0/esm/vs/editor/editor.main.js') as any;
+    let monaco: any;
+    try {
+      // @ts-expect-error — CDN URL 模块无类型声明，使用 any 处理
+      monaco = await import('https://esm.sh/monaco-editor@0.52.0/esm/vs/editor/editor.main.js') as any;
+    } catch (err) {
+      mountEl_.innerHTML = '<p style="color:var(--color-error);padding:1rem">编辑器加载失败，请刷新页面重试</p>';
+      return;
+    }
 
     // 创建编辑器实例
-    const editor = monaco.editor.create(mountEl, {
+    const editor = monaco.editor.create(mountEl_, {
       value: starterCode,
       language: 'rust',
       theme: 'vs-dark',
@@ -139,22 +152,22 @@ const hasTests = tests.length > 0;
 
     /** 禁用所有操作按钮 */
     function disableButtons(): void {
-      runBtn!.disabled = true;
-      resetBtn!.disabled = true;
+      runBtn_.disabled = true;
+      resetBtn_.disabled = true;
       if (testBtn) testBtn.disabled = true;
     }
 
     /** 恢复所有操作按钮 */
     function enableButtons(): void {
-      runBtn!.disabled = false;
-      resetBtn!.disabled = false;
+      runBtn_.disabled = false;
+      resetBtn_.disabled = false;
       if (testBtn) testBtn.disabled = false;
     }
 
     /** 清空输出区和测试结果 */
     function clearOutput(): void {
-      outputEl!.hidden = true;
-      outputEl!.innerHTML = '';
+      outputEl_.hidden = true;
+      outputEl_.innerHTML = '';
       if (resultsEl) {
         resultsEl.hidden = true;
         // 重置所有测试点状态
@@ -163,19 +176,19 @@ const hasTests = tests.length > 0;
           dot.className = 'ce-test-dot';
         });
       }
-      statusEl!.textContent = '';
-      statusEl!.className = 'code-runner-status';
+      statusEl_.textContent = '';
+      statusEl_.className = 'code-runner-status';
     }
 
     /** 在输出区显示执行结果 */
     function showRunResult(result: { success: boolean; stdout: string; stderr: string }): void {
-      outputEl!.hidden = false;
+      outputEl_.hidden = false;
       if (result.success) {
-        outputEl!.innerHTML = result.stdout
+        outputEl_.innerHTML = result.stdout
           ? `<pre class="code-runner-stdout">${escapeHtml(result.stdout)}</pre>`
           : '<span class="code-runner-stdout">（无输出）</span>';
       } else {
-        outputEl!.innerHTML = result.stderr
+        outputEl_.innerHTML = result.stderr
           ? `<pre class="code-runner-stderr">${escapeHtml(result.stderr)}</pre>`
           : '<span class="code-runner-stderr">（编译失败，无错误信息）</span>';
       }
@@ -183,34 +196,34 @@ const hasTests = tests.length > 0;
 
     // ── 重置按钮逻辑 ──────────────────────────────────────────────────────
 
-    resetBtn.addEventListener('click', () => {
+    resetBtn_.addEventListener('click', () => {
       editor.setValue(starterCode);
       clearOutput();
     });
 
     // ── 运行按钮逻辑 ──────────────────────────────────────────────────────
 
-    runBtn.addEventListener('click', async () => {
+    runBtn_.addEventListener('click', async () => {
       disableButtons();
-      runBtn.textContent = '运行中...';
-      statusEl.textContent = '⏳ 执行中...';
-      statusEl.className = 'code-runner-status code-runner-status-running';
-      outputEl.hidden = true;
+      runBtn_.textContent = '运行中...';
+      statusEl_.textContent = '⏳ 执行中...';
+      statusEl_.className = 'code-runner-status code-runner-status-running';
+      outputEl_.hidden = true;
 
       try {
         const result = await executeCode(editor.getValue());
-        statusEl.textContent = '';
-        statusEl.className = 'code-runner-status';
+        statusEl_.textContent = '';
+        statusEl_.className = 'code-runner-status';
         showRunResult(result);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        statusEl.textContent = '✗ 请求失败';
-        statusEl.className = 'code-runner-status code-runner-status-error';
-        outputEl.hidden = false;
-        outputEl.innerHTML = `<span class="code-runner-stderr">${escapeHtml(msg)}</span>`;
+        statusEl_.textContent = '✗ 请求失败';
+        statusEl_.className = 'code-runner-status code-runner-status-error';
+        outputEl_.hidden = false;
+        outputEl_.innerHTML = `<span class="code-runner-stderr">${escapeHtml(msg)}</span>`;
       } finally {
         enableButtons();
-        runBtn.textContent = '▶ 运行';
+        runBtn_.textContent = '▶ 运行';
       }
     });
 
@@ -220,8 +233,8 @@ const hasTests = tests.length > 0;
       testBtn.addEventListener('click', async () => {
         disableButtons();
         testBtn.textContent = '测试中...';
-        statusEl.textContent = '⏳ 测试中...';
-        statusEl.className = 'code-runner-status code-runner-status-running';
+        statusEl_.textContent = '⏳ 测试中...';
+        statusEl_.className = 'code-runner-status code-runner-status-running';
 
         // 显示测试结果列表，重置所有点
         resultsEl.hidden = false;
@@ -229,8 +242,8 @@ const hasTests = tests.length > 0;
           dot.textContent = '○';
           dot.className = 'ce-test-dot';
         });
-        outputEl.hidden = true;
-        outputEl.innerHTML = '';
+        outputEl_.hidden = true;
+        outputEl_.innerHTML = '';
 
         try {
           // 优化：只执行一次代码，然后对所有测试验证结果
@@ -265,24 +278,24 @@ const hasTests = tests.length > 0;
           // 显示通过数量
           const total = tests.length;
           if (passCount === total) {
-            statusEl.textContent = `✓ 全部通过 ${passCount}/${total}`;
-            statusEl.className = 'code-runner-status code-runner-status-ok';
+            statusEl_.textContent = `✓ 全部通过 ${passCount}/${total}`;
+            statusEl_.className = 'code-runner-status code-runner-status-ok';
           } else {
-            statusEl.textContent = `✗ 通过 ${passCount}/${total}`;
-            statusEl.className = 'code-runner-status code-runner-status-error';
+            statusEl_.textContent = `✗ 通过 ${passCount}/${total}`;
+            statusEl_.className = 'code-runner-status code-runner-status-error';
           }
 
           // 若有编译错误则展示错误信息
           if (!result.success && result.stderr) {
-            outputEl.hidden = false;
-            outputEl.innerHTML = `<pre class="code-runner-stderr">${escapeHtml(result.stderr)}</pre>`;
+            outputEl_.hidden = false;
+            outputEl_.innerHTML = `<pre class="code-runner-stderr">${escapeHtml(result.stderr)}</pre>`;
           }
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          statusEl.textContent = '✗ 请求失败';
-          statusEl.className = 'code-runner-status code-runner-status-error';
-          outputEl.hidden = false;
-          outputEl.innerHTML = `<span class="code-runner-stderr">${escapeHtml(msg)}</span>`;
+          statusEl_.textContent = '✗ 请求失败';
+          statusEl_.className = 'code-runner-status code-runner-status-error';
+          outputEl_.hidden = false;
+          outputEl_.innerHTML = `<span class="code-runner-stderr">${escapeHtml(msg)}</span>`;
         } finally {
           enableButtons();
           testBtn.textContent = '✓ 测试';
