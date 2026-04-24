@@ -1,0 +1,121 @@
+---
+// src/components/quiz/QuizPage.astro
+// 页面级测验容器：汇总所有题目，追踪选择题得分，完成后保存结果
+
+import MultipleChoice from './MultipleChoice.astro';
+import CodingQuestion from './CodingQuestion.astro';
+
+interface MultipleChoiceQuestion {
+  type: 'multiple-choice';
+  question: string;
+  options: string[];
+  answer: number;
+  explanation: string;
+}
+
+interface CodingQuestionItem {
+  type: 'coding';
+  exerciseId: string;
+}
+
+interface Exercise {
+  id: string;
+  title: string;
+  description: string;
+  starterCode: string;
+  tests: Array<{ type: string; description: string; expected?: string }>;
+  hint?: string;
+  solution?: string;
+}
+
+interface Props {
+  questions: Array<MultipleChoiceQuestion | CodingQuestionItem>;
+  exercises: Exercise[];  // 供 CodingQuestion 使用
+  slug: string;           // 用于 saveQuizResult
+}
+
+const { questions, exercises, slug } = Astro.props;
+// 统计选择题总数，用于判断何时显示得分汇总
+const totalMC = questions.filter(q => q.type === 'multiple-choice').length;
+---
+
+<div class="quiz-page" data-slug={slug} data-total-mc={totalMC}>
+  <div class="quiz-questions">
+    {questions.map((q, i) =>
+      q.type === 'multiple-choice'
+        ? <MultipleChoice
+            question={q.question}
+            options={q.options}
+            answer={q.answer}
+            explanation={q.explanation}
+            questionIdx={i}
+          />
+        : <CodingQuestion
+            exerciseId={q.exerciseId}
+            questionIdx={i}
+            exercises={exercises}
+          />
+    )}
+  </div>
+
+  <!-- 得分汇总：初始隐藏，所有选择题回答完后显示 -->
+  {totalMC > 0 && (
+    <div class="quiz-result" id="quiz-result" hidden>
+      <div class="quiz-score">
+        <span class="quiz-score-num" id="quiz-score-num">0</span>
+        <span class="quiz-score-sep">/</span>
+        <span class="quiz-score-total">{totalMC}</span>
+      </div>
+      <p class="quiz-score-label" id="quiz-score-label">道选择题答对</p>
+    </div>
+  )}
+</div>
+
+<script>
+  import { saveQuizResult } from '../../lib/progress';
+
+  const quizEl = document.querySelector('.quiz-page') as HTMLElement | null;
+  if (quizEl) {
+    const slug = quizEl.dataset.slug ?? '';
+    const totalMC = parseInt(quizEl.dataset.totalMc ?? '0');
+    const resultEl = document.getElementById('quiz-result');
+    const scoreNumEl = document.getElementById('quiz-score-num');
+    const scoreLabelEl = document.getElementById('quiz-score-label');
+
+    let answeredCount = 0;
+    let correctCount = 0;
+
+    // 监听每道选择题的答题事件
+    window.addEventListener('quiz-answer', (e) => {
+      const { correct } = (e as CustomEvent<{ idx: number; correct: boolean }>).detail;
+      answeredCount++;
+      if (correct) correctCount++;
+
+      // 所有选择题回答完毕时显示汇总
+      if (answeredCount === totalMC && resultEl) {
+        resultEl.hidden = false;
+        if (scoreNumEl) scoreNumEl.textContent = String(correctCount);
+        const pct = Math.round((correctCount / totalMC) * 100);
+        if (scoreLabelEl) scoreLabelEl.textContent = `道选择题答对（${pct}%）`;
+        saveQuizResult(slug, pct);
+      }
+    });
+  }
+</script>
+
+<style>
+  .quiz-page { max-width: 780px; }
+  .quiz-questions { margin-bottom: 2rem; }
+  .quiz-result {
+    text-align: center; padding: 2rem;
+    border: 1px solid var(--color-border); border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+  }
+  .quiz-score {
+    display: flex; align-items: baseline; justify-content: center;
+    gap: 0.25rem; margin-bottom: 0.5rem;
+  }
+  .quiz-score-num { font-size: 3rem; font-weight: 700; color: var(--color-success); }
+  .quiz-score-sep, .quiz-score-total { font-size: 1.5rem; color: var(--color-text-muted); }
+  .quiz-score-label { font-size: 1rem; color: var(--color-text-muted); }
+</style>

@@ -1,0 +1,53 @@
+---
+// src/components/quiz/CodingQuestion.astro
+// 编码练习题组件：根据 exerciseId 查找题目并渲染 CodeEditor
+
+import CodeEditor from '../code/CodeEditor.astro';
+
+interface Exercise {
+  id: string;
+  title: string;
+  description: string;
+  starterCode: string;
+  tests: Array<{ type: string; description: string; expected?: string }>;
+  hint?: string;
+}
+
+interface Props {
+  exerciseId: string;    // 对应 exercises collection 中的 exercise.id
+  exercises: Exercise[]; // 从 exercises collection 传入的练习题数组
+  questionIdx: number;
+}
+
+const { exerciseId, exercises, questionIdx } = Astro.props;
+// 根据 exerciseId 找到对应练习题
+const ex = exercises.find(e => e.id === exerciseId);
+---
+
+{ex ? (
+  <div class="cq-block">
+    <p class="cq-label">
+      <span class="mc-qnum">{questionIdx + 1}.</span> 编码练习：{ex.title}
+    </p>
+    <p class="cq-desc">{ex.description}</p>
+    <CodeEditor starterCode={ex.starterCode} tests={ex.tests as any} editorId={`cq-${exerciseId}`} />
+    {ex.hint && (
+      <details class="cq-hint">
+        <summary>💡 提示</summary>
+        <p>{ex.hint}</p>
+      </details>
+    )}
+  </div>
+) : (
+  <p class="cq-missing">找不到练习题：{exerciseId}</p>
+)}
+
+<style>
+  .cq-block { margin-bottom: 2rem; }
+  .cq-label { font-size: 1rem; font-weight: 500; margin-bottom: 0.5rem; }
+  .cq-desc { color: var(--color-text-muted); font-size: 0.9375rem; margin-bottom: 1rem; line-height: 1.6; }
+  .cq-hint { margin-top: 0.75rem; border: 1px solid var(--color-border); border-radius: 6px; padding: 0 0.875rem; }
+  .cq-hint summary { padding: 0.625rem 0; cursor: pointer; font-size: 0.875rem; color: var(--color-text-muted); }
+  .cq-hint p { padding: 0 0 0.75rem; font-size: 0.875rem; color: var(--color-text-muted); }
+  .cq-missing { color: var(--color-error); font-size: 0.875rem; }
+</style>
