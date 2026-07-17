@@ -58,7 +58,7 @@ const articleSlugs = navTree.flatMap(ch => [ch.indexSlug, ...ch.articles.map(a =
     </div>
   </section>
 
-  <script define:vars={{ firstChapterHref, articleSlugs }} is:inline>
+  <script define:vars={{ firstChapterHref, articleSlugs, base }} is:inline>
 
     const STORAGE_KEY = 'rust-tutorial-last-visited:' + base;
     const last = localStorage.getItem(STORAGE_KEY);
